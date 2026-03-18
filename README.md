@@ -1,50 +1,67 @@
-# Welcome to your Expo app 👋
+# TwentiFi ⚡️
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**The 25-minute life-logger for the ultra-productive.**
 
-## Get started
+TwentiFi (formerly *The 25*) is a mobile-first habit tracker designed to capture the "reality of your day" in 20-minute pulses. Instead of asking what you *plan* to do, TwentiFi asks: **"What did you actually do?"**
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## 🚀 Vision
+Most apps focus on the future (calendars/todos). TwentiFi focuses on the **present**. By prompting you every 20 minutes, it builds a high-resolution timeline of your life, usage patterns, and productivity levels, then uses AI to coach you into a better version of yourself.
 
-2. Start the app
+## ✨ Key Features
+- **The 20-Minute Pulse**: Integrated notification system that prompts you every 20 minutes.
+- **5-Second Logging**: Optimized UI for near-instant logging via voice or text.
+- **Sarvam AI Transcription**: High-quality, context-aware speech-to-text for India-native accents and multilingual environments.
+- **Gen-Z AI Insights**: Powered by **Gemini 3.1 Flash-Lite** to provide vibey, chaotic, yet deeply helpful productivity feedback.
+- **Interactive Stats**: Real-time productivity scores, focus streaks, and activity breakdown charts.
+- **Local-First Privacy**: Your logs live in a high-performance **SQLite** database on your device.
 
-   ```bash
-   npx expo start
-   ```
+## 🛠 Tech Stack
+- **Framework**: [Expo](https://expo.dev) (React Native) + [Expo Router](https://docs.expo.dev/router/introduction)
+- **Styling**: [NativeWind](https://www.nativewind.dev/) (Tailwind CSS for Native)
+- **State**: [Zustand](https://github.com/pmndrs/zustand) (Persistence via AsyncStorage)
+- **Database**: [Expo SQLite](https://docs.expo.dev/versions/latest/sdk/sqlite/)
+- **AI/LLM**: Google Gemini 3.1 via **Firebase Vertex AI**
+- **STT**: [Sarvam AI](https://www.sarvam.ai/) REST API
 
-In the output, you'll find options to open the app in a
+---
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 🛠 Setup & Development
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### 1. Requirements
+- Node.js (Latest LTS)
+- Expo Go (for testing) or an Android/iOS Development Build
 
-## Get a fresh project
-
-When you're ready, run:
-
+### 2. Installation
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 3. API Keys
+To unlock full functionality, enter your keys in the **Settings** screen within the app:
+- **Gemini API Key**: For notifications and insights.
+- **Sarvam API Key**: For voice transcription accuracy.
 
-## Learn more
+### 4. Running Locally
+```bash
+# Start with version check skip (if network issues occur)
+$env:EXPO_OFFLINE="1"; npx expo start -c
 
-To learn more about developing your project with Expo, look at the following resources:
+# Normal start
+npx expo start
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+---
 
-## Join the community
+## 📂 Project Structure
+```text
+app/          # Expo Router pages (Tabs & Modals)
+components/   # Reusable UI components
+services/     # SQLite, Gemini, Sarvam, and Notification logic
+store/        # Zustand stores for logs and sessions
+hooks/        # Custom React hooks
+```
 
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## 📜 License
+Private/Proprietary. Built for personal productivity excellence.
