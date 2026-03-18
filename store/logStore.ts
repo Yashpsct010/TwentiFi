@@ -35,6 +35,7 @@ export const useLogStore = create<LogState>((set) => ({
       }));
     } catch (error) {
       console.error('Failed to save log:', error);
+      throw error;
     }
   },
   clearLogs: async () => {

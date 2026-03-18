@@ -9,6 +9,7 @@ import {
   RecordingPresets, 
   requestRecordingPermissionsAsync 
 } from "expo-audio";
+import { Audio } from "expo-av";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -18,6 +19,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 
 // Safe access to native modules that might be missing in Expo Go
@@ -58,6 +60,8 @@ export default function LoggingScreen() {
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const [liveTranscript, setLiveTranscript] = useState("");
   const [sttError, setSttError] = useState<string | null>(null);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [useSpeechFallback, setUseSpeechFallback] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
@@ -85,6 +89,42 @@ export default function LoggingScreen() {
       setSttError(`Error: ${event.error}`);
     }
   });
+
+  React.useEffect(() => {
+    return sound
+      ? () => {
+          sound.unloadAsync();
+        }
+      : undefined;
+  }, [sound]);
+
+  async function playAudio() {
+    if (!audioUri) return;
+    
+    if (isPlaying && sound) {
+      await sound.stopAsync();
+      setIsPlaying(false);
+      return;
+    }
+
+    try {
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: audioUri },
+        { shouldPlay: true }
+      );
+      setSound(newSound);
+      setIsPlaying(true);
+      
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setIsPlaying(false);
+        }
+      });
+    } catch (err) {
+      console.error("Failed to play sound", err);
+      setIsPlaying(false);
+    }
+  }
 
   useSpeechRecognitionEvent("audiostart", (event: any) => {
     if (event.uri) {
@@ -212,7 +252,11 @@ export default function LoggingScreen() {
     }
   }
 
-  const handleRetry = () => {
+  const handleRetry = async () => {
+    if (isPlaying && sound) {
+      await sound.stopAsync();
+      setIsPlaying(false);
+    }
     const wasAutoFilled =
       activity === liveTranscript || activity === "Voice Entry";
     setAudioUri(null);
@@ -230,14 +274,19 @@ export default function LoggingScreen() {
     }
 
     if (activity.trim() || audioUri) {
-      await addLog(activity || "Voice Entry", mood, productivity, audioUri);
+      try {
+        await addLog(activity || "Voice Entry", mood, productivity, audioUri);
 
-      const { isActive, rescheduleNextPulse } = useSessionStore.getState();
-      if (isActive) {
-        await rescheduleNextPulse();
+        const { isActive, rescheduleNextPulse } = useSessionStore.getState();
+        if (isActive) {
+          // Do not await this, let it run in the background. Gemini API takes ~5 seconds!
+          rescheduleNextPulse().catch(e => console.error("Pulse reschedule failed", e));
+        }
+
+        router.back();
+      } catch (err: any) {
+        Alert.alert("Save Error", "Failed to save log to database: " + (err.message || String(err)));
       }
-
-      router.back();
     } else {
       console.warn("Activity and audio are empty, not saving");
     }
@@ -290,15 +339,27 @@ export default function LoggingScreen() {
                       : "TAP TO RECORD"}
           </Text>
           {audioUri && !isRecording && (
-            <TouchableOpacity
-              onPress={handleRetry}
-              className="mt-4 px-6 py-2 rounded-full border border-red-500/30 bg-red-500/5 flex-row items-center"
-            >
-              <Ionicons name="refresh" size={14} color="#F87171" />
-              <Text className="text-red-400 text-[10px] font-black uppercase tracking-[2px] ml-2">
-                Retry Recording
-              </Text>
-            </TouchableOpacity>
+            <View className="flex-row items-center mt-4 gap-4">
+              <TouchableOpacity
+                onPress={playAudio}
+                className={`px-6 py-2 rounded-full border flex-row items-center ${isPlaying ? 'border-brand-purple/50 bg-brand-purple/20' : 'border-brand-purple/30 bg-brand-purple/5'}`}
+              >
+                <Ionicons name={isPlaying ? "stop" : "play"} size={14} color="#8B5CF6" />
+                <Text className="text-brand-purple text-[10px] font-black uppercase tracking-[2px] ml-2">
+                  {isPlaying ? "Stop" : "Play"}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={handleRetry}
+                className="px-6 py-2 rounded-full border border-red-500/30 bg-red-500/5 flex-row items-center"
+              >
+                <Ionicons name="refresh" size={14} color="#F87171" />
+                <Text className="text-red-400 text-[10px] font-black uppercase tracking-[2px] ml-2">
+                  Retry
+                </Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
 
@@ -386,13 +447,18 @@ export default function LoggingScreen() {
 
           <TouchableOpacity
             onPress={handleSave}
-            className="bg-brand-purple p-5 rounded-full items-center mt-12 shadow-2xl shadow-brand-purple/50 flex-row justify-center"
+            disabled={isTranscribing || isStopping}
+            className={`p-5 rounded-full items-center mt-12 flex-row justify-center ${
+              isTranscribing || isStopping 
+                ? "bg-brand-card border border-white/10 opacity-50" 
+                : "bg-brand-purple shadow-2xl shadow-brand-purple/50"
+            }`}
           >
             <View className="mr-3">
-              <Ionicons name="paper-plane" size={20} color="white" />
+              <Ionicons name={isTranscribing || isStopping ? "hourglass-outline" : "paper-plane"} size={20} color="white" />
             </View>
             <Text className="text-white font-black text-lg ml-3">
-              SAVE LOG ENTRY
+              {isTranscribing || isStopping ? "PROCESSING AUDIO..." : "SAVE LOG ENTRY"}
             </Text>
           </TouchableOpacity>
         </View>
