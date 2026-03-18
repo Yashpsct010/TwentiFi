@@ -13,8 +13,18 @@ export interface LogEntry {
 
 const DB_NAME = "the25.db";
 
+// Singleton: reuse a single database connection for the entire app lifecycle
+let _db: SQLite.SQLiteDatabase | null = null;
+
+async function getDB(): Promise<SQLite.SQLiteDatabase> {
+  if (!_db) {
+    _db = await SQLite.openDatabaseAsync(DB_NAME);
+  }
+  return _db;
+}
+
 export const initDB = async () => {
-  const db = await SQLite.openDatabaseAsync(DB_NAME);
+  const db = await getDB();
 
   await db.execAsync(`
     PRAGMA journal_mode = WAL;
@@ -32,7 +42,7 @@ export const initDB = async () => {
 };
 
 export const saveLog = async (log: LogEntry) => {
-  const db = await SQLite.openDatabaseAsync(DB_NAME);
+  const db = await getDB();
   await db.runAsync(
     "INSERT INTO logs (id, timestamp, activity, mood, productivity, audioUri) VALUES (?, ?, ?, ?, ?, ?)",
     log.id,
@@ -45,7 +55,7 @@ export const saveLog = async (log: LogEntry) => {
 };
 
 export const getAllLogs = async (): Promise<LogEntry[]> => {
-  const db = await SQLite.openDatabaseAsync(DB_NAME);
+  const db = await getDB();
   const allRows = await db.getAllAsync<LogEntry>(
     "SELECT * FROM logs ORDER BY timestamp DESC",
   );
@@ -53,6 +63,6 @@ export const getAllLogs = async (): Promise<LogEntry[]> => {
 };
 
 export const deleteAllLogs = async () => {
-  const db = await SQLite.openDatabaseAsync(DB_NAME);
+  const db = await getDB();
   await db.runAsync("DELETE FROM logs");
 };
