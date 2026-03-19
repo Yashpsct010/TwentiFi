@@ -8,6 +8,8 @@ import * as Sharing from "expo-sharing";
 import React from "react";
 import {
   Alert,
+  Linking,
+  Platform,
   ScrollView,
   Switch,
   Text,
@@ -115,9 +117,16 @@ export default function SettingsScreen() {
               placeholderTextColor="#4B5563"
               secureTextEntry
             />
-            <Text className="text-white/30 text-[10px] mt-3 font-medium uppercase tracking-widest leading-relaxed">
-              Required for high-quality Speech-to-Text
-            </Text>
+            <View className="flex-row items-center justify-between mt-3">
+              <Text className="text-white/30 text-[10px] font-medium uppercase tracking-widest leading-relaxed flex-1">
+                Required for Speech-to-Text
+              </Text>
+              <TouchableOpacity onPress={() => Linking.openURL('https://dashboard.sarvam.ai/')}>
+                <Text className="text-[#8B5CF6] text-[10px] font-bold uppercase tracking-widest">
+                  Get Key
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
           <View className="bg-brand-card p-5 rounded-[24px] mb-3 border border-white/5">
             <View className="flex-row items-center mb-4">
@@ -134,9 +143,16 @@ export default function SettingsScreen() {
               placeholderTextColor="#4B5563"
               secureTextEntry
             />
-            <Text className="text-white/30 text-[10px] mt-3 font-medium uppercase tracking-widest leading-relaxed">
-              Enables Gen-Z AI insights & notifications
-            </Text>
+            <View className="flex-row items-center justify-between mt-3">
+              <Text className="text-white/30 text-[10px] font-medium uppercase tracking-widest leading-relaxed flex-1">
+                Enables AI insights on Stats
+              </Text>
+              <TouchableOpacity onPress={() => Linking.openURL('https://aistudio.google.com/app/apikey')}>
+                <Text className="text-[#8B5CF6] text-[10px] font-bold uppercase tracking-widest">
+                  Get Key
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </Section>
 
@@ -221,26 +237,35 @@ export default function SettingsScreen() {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => {
-              Alert.alert(
-                "Purge All Data",
-                "Are you sure you want to clear all data? This cannot be undone.",
-                [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: async () => {
-                      await clearLogs();
-                      await endSession();
-                      Alert.alert(
-                        "Data Purged",
-                        "All logs and active sessions have been cleared.",
-                      );
+            onPress={async () => {
+              if (Platform.OS === 'web') {
+                const confirmed = window.confirm("Are you sure you want to clear all data? This cannot be undone.");
+                if (confirmed) {
+                  await clearLogs();
+                  await endSession();
+                  window.alert("All logs and active sessions have been cleared.");
+                }
+              } else {
+                Alert.alert(
+                  "Purge All Data",
+                  "Are you sure you want to clear all data? This cannot be undone.",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Delete",
+                      style: "destructive",
+                      onPress: async () => {
+                        await clearLogs();
+                        await endSession();
+                        Alert.alert(
+                          "Data Purged",
+                          "All logs and active sessions have been cleared.",
+                        );
+                      },
                     },
-                  },
-                ],
-              );
+                  ],
+                );
+              }
             }}
             className="flex-row items-center p-5 bg-brand-card rounded-[24px] border border-red-500/20"
           >

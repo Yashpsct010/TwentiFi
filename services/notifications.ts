@@ -5,6 +5,32 @@ import Constants, { ExecutionEnvironment } from "expo-constants";
 // Check if running in Expo Go
 const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
+const LOG_NOTIFICATIONS = [
+  { title: "Pulse Check! ✌️", body: "What's the move? Log your last session, bestie." },
+  { title: "Vibe Check ⏱️", body: "20 mins are up! What did you actually get done?" },
+  { title: "Spill the tea ☕", body: "Time to log your progress. Don't ghost your goals!" },
+  { title: "Main Character Energy 🌟", body: "Update your log! Are we winning right now?" },
+  { title: "No cap, time to log 🧢", body: "Keep it 100. Drop your latest update." },
+  { title: "W or L? 🎮", body: "20 minutes down. Is this session a W or an L?" },
+  { title: "Locked in? 🔒", body: "Let's see that productivity drop." }
+];
+
+const REMINDER_NOTIFICATIONS = [
+  { title: "Still there? 💀", body: "The grind don't stop, but your logs did. Come back!" },
+  { title: "Bro, you ghosted? 👻", body: "We need that log update ASAP." },
+  { title: "Hello? 🎤", body: "Is this thing on? We are missing your log." },
+  { title: "Don't sell the bag 💰", body: "You missed a pulse. Get back in the zone!" },
+  { title: "Bruh... 🤦‍♂️", body: "We're waiting on your update. Let's get it." }
+];
+
+export function getRandomLogNotification() {
+  return LOG_NOTIFICATIONS[Math.floor(Math.random() * LOG_NOTIFICATIONS.length)];
+}
+
+export function getRandomReminderNotification() {
+  return REMINDER_NOTIFICATIONS[Math.floor(Math.random() * REMINDER_NOTIFICATIONS.length)];
+}
+
 export async function requestPermissions() {
   if (Platform.OS === "web") return false;
 
@@ -34,13 +60,15 @@ export async function scheduleLoggingNotification(
 ) {
   if (Platform.OS === "web") return; // Skip notifications on web
 
+  const notificationContent = content || getRandomLogNotification();
+
   try {
     await Notifications.cancelAllScheduledNotificationsAsync();
 
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: content?.title || "Time to log!",
-        body: content?.body || "20 minutes done. What did you actually do?",
+        title: notificationContent.title,
+        body: notificationContent.body,
         data: { type: "log_prompt" },
         sound: true,
       },
@@ -61,11 +89,13 @@ export async function scheduleReminderNotification(
 ) {
   if (Platform.OS === "web") return; // Skip notifications on web
 
+  const notificationContent = content || getRandomReminderNotification();
+
   try {
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: content?.title || "Still there?",
-        body: content?.body || "You ghosted your log. What happened?",
+        title: notificationContent.title,
+        body: notificationContent.body,
         data: { type: "reminder" },
       },
       trigger: {

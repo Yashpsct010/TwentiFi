@@ -29,7 +29,7 @@ const callGemini = async (prompt: string, apiKey?: string): Promise<string> => {
       const { getVertexAI, getGenerativeModel } = FirebaseVertexAI;
       const vertexAI = getVertexAI();
       const model = getGenerativeModel(vertexAI, { 
-        model: "gemini-3.1-flash-lite" 
+        model: "gemini-3.1-flash-lite-preview" 
       });
 
       const result = await model.generateContent(prompt);
@@ -46,7 +46,7 @@ const callGemini = async (prompt: string, apiKey?: string): Promise<string> => {
     throw new Error("Gemini API Key is required for development/Expo Go. Add it in Settings.");
   }
 
-  const model = "gemini-3.1-flash-lite";
+  const model = "gemini-3.1-flash-lite-preview";
   console.log(`[Gemini] Using REST API fallback (model: ${model})`);
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -99,33 +99,7 @@ const extractJSON = (raw: string): any => {
   throw new Error("Failed to parse Gemini JSON response");
 };
 
-/**
- * Generates both log prompt and reminder in a single API call
- */
-export const generateConsolidatedNotifications = async (
-  apiKey?: string
-): Promise<{ log_prompt: { title: string, body: string }, reminder: { title: string, body: string } }> => {
-  const prompt = `
-    Generate TWO short, Gen-Z style notifications for a focus app.
-    1. log_prompt: Asking the user to log what they did in the last 20 minutes.
-    2. reminder: Reminding the user they missed a log/pulse and should come back.
-    
-    Tone: Gen-Z slang, vibey, chaotic, motivational.
-    Format as pure JSON: {"log_prompt": {"title": "...", "body": "..."}, "reminder": {"title": "...", "body": "..."}}
-    No markdown formatting. Max 30 chars for titles, 60 for bodies.
-  `;
 
-  try {
-    const responseText = await callGemini(prompt, apiKey);
-    return extractJSON(responseText);
-  } catch (e) {
-    console.warn("Gemini consolidated call failed, using fallbacks:", e);
-    return {
-      log_prompt: { title: "Pulse Check! ✌️", body: "What's the move? Log your last session, bestie." },
-      reminder: { title: "Still there? 💀", body: "The grind don't stop, but your logs did. Come back!" }
-    };
-  }
-};
 
 /**
  * Generates deep insights from log data

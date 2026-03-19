@@ -5,7 +5,6 @@ import {
   scheduleReminderNotification,
 } from "@/services/notifications";
 import { useSettingsStore } from "@/store/settingsStore";
-import { generateConsolidatedNotifications } from "@/services/gemini";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
@@ -48,30 +47,17 @@ export const useSessionStore = create<SessionState>()(
           const granted = await requestPermissions();
           if (!granted) return;
 
-          const { loggingInterval, geminiApiKey, missedLogReminders } = useSettingsStore.getState();
+          const { loggingInterval, missedLogReminders } = useSettingsStore.getState();
           
           // Cancel previous triggers to avoid overlap
           await cancelAllScheduledNotificationsAsync();
 
-          let logPrompt;
-          let reminderPrompt;
-
-          if (geminiApiKey) {
-            try {
-              const notifications = await generateConsolidatedNotifications(geminiApiKey);
-              logPrompt = notifications.log_prompt;
-              reminderPrompt = notifications.reminder;
-            } catch (e) {
-              console.warn("AI notification generation failed, using fallbacks", e);
-            }
-          }
-
-          // Schedule the pulse
-          await scheduleLoggingNotification(loggingInterval, logPrompt);
+          // Schedule the pulse with randomized local text (undefined uses fallback)
+          await scheduleLoggingNotification(loggingInterval, undefined);
 
           // Schedule follow-up reminder if enabled (pulse interval + 5 mins)
           if (missedLogReminders) {
-            await scheduleReminderNotification(loggingInterval + 5, reminderPrompt);
+            await scheduleReminderNotification(loggingInterval + 5, undefined);
           }
         } catch (error) {
           console.warn("Rescheduling notifications failed:", error);
