@@ -1,6 +1,8 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import Constants, { ExecutionEnvironment } from "expo-constants";
+import { useSettingsStore } from "@/store/settingsStore";
+import { generateNotificationContent } from "./gemini";
 
 // Check if running in Expo Go
 const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
@@ -60,7 +62,17 @@ export async function scheduleLoggingNotification(
 ) {
   if (Platform.OS === "web") return; // Skip notifications on web
 
-  const notificationContent = content || getRandomLogNotification();
+  let notificationContent = content || getRandomLogNotification();
+  if (!content) {
+    const { geminiApiKey } = useSettingsStore.getState();
+    if (geminiApiKey) {
+      try {
+        notificationContent = await generateNotificationContent(geminiApiKey, 'log_prompt');
+      } catch (e) {
+        console.warn("Gemini notification generation failed, using fallback.");
+      }
+    }
+  }
 
   try {
     await Notifications.cancelAllScheduledNotificationsAsync();
@@ -89,7 +101,17 @@ export async function scheduleReminderNotification(
 ) {
   if (Platform.OS === "web") return; // Skip notifications on web
 
-  const notificationContent = content || getRandomReminderNotification();
+  let notificationContent = content || getRandomReminderNotification();
+  if (!content) {
+    const { geminiApiKey } = useSettingsStore.getState();
+    if (geminiApiKey) {
+      try {
+        notificationContent = await generateNotificationContent(geminiApiKey, 'reminder');
+      } catch (e) {
+        console.warn("Gemini notification reminder generation failed, using fallback.");
+      }
+    }
+  }
 
   try {
     await Notifications.scheduleNotificationAsync({

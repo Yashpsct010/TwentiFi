@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-on-surface font-body antialiased selection:bg-primary/30;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-surface-variant/50 backdrop-blur-2xl border border-outline-variant/20 shadow-[0_24px_48px_#dee5ff0F];
+  }
+  
+  .glass-button {
+    @apply bg-surface-variant/30 backdrop-blur-[12px] border border-outline-variant/10 shadow-[0_4px_12px_#00000080];
+  }
+
+  .primary-button {
+    @apply bg-primary-gradient shadow-[0_0_20px_#ba9eff66] text-on-primary font-bold overflow-hidden relative;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: theme('colors.background');
+}
+::-webkit-scrollbar-thumb {
+  background: theme('colors.surface-highest');
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: theme('colors.outline-variant');
+}

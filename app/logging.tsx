@@ -1,4 +1,4 @@
-import { transcribeWithSarvam } from "@/services/sarvam";
+import { transcribeWithGemini } from "@/services/gemini";
 import { useLogStore } from "@/store/logStore";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
@@ -65,7 +65,7 @@ export default function LoggingScreen() {
   const [useSpeechFallback, setUseSpeechFallback] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
-  const { sarvamApiKey } = useSettingsStore();
+  const { geminiApiKey } = useSettingsStore();
 
   // Speech Recognition Events
   useSpeechRecognitionEvent("start", () => {
@@ -222,13 +222,13 @@ export default function LoggingScreen() {
     setIsStopping(false);
 
     // After stopping, if we have a URI and an API key, get a premium transcript
-    if (finalUri && sarvamApiKey) {
+    if (finalUri && geminiApiKey) {
       setIsTranscribing(true);
       setSttError(null);
       try {
-        const professionalTranscript = await transcribeWithSarvam(
+        const professionalTranscript = await transcribeWithGemini(
           finalUri,
-          sarvamApiKey,
+          geminiApiKey,
         );
         if (professionalTranscript) {
           if (!activity.trim() || activity === liveTranscript) {
@@ -237,7 +237,7 @@ export default function LoggingScreen() {
           setLiveTranscript(professionalTranscript);
         }
       } catch (err: any) {
-        console.error("Sarvam transcription failed:", err);
+        console.error("Gemini transcription failed:", err);
         if (liveTranscript && !activity.trim()) {
           setActivity(liveTranscript);
         }

@@ -2,6 +2,7 @@ import { useLogStore } from "@/store/logStore";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { generateAIInsights, AIInsights } from "@/services/gemini";
+import StreakCalendar from "@/components/StreakCalendar";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState, useEffect } from "react";
 import { ScrollView, Text, View, ActivityIndicator } from "react-native";
@@ -111,6 +112,10 @@ export default function StatsScreen() {
               {streak} <Text className="text-lg font-bold">Days</Text>
             </Text>
           </View>
+        </View>
+
+        <View className="mb-8">
+          <StreakCalendar logs={logs} />
         </View>
 
         <View className="bg-brand-card p-8 rounded-[40px] border border-white/5 items-center mb-8">

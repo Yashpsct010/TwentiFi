@@ -1,0 +1,66 @@
+name: Build and Release APK
+
+on:
+  push:
+    branches:
+      - main  # Triggers automatically when pushing to the main branch
+  workflow_dispatch: # Allows manual trigger from the GitHub Actions tab
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Needed to create the GitHub Release
+
+    steps:
+      - name: 🏗 Setup repository
+        uses: actions/checkout@v4
+
+      - name: 🏗 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: 🏗 Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: 🏗 Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 🔐 Generate google-services.json
+        run: node -e "require('fs').writeFileSync('google-services.json', Buffer.from(process.env.GOOGLE_SERVICES_JSON_BASE64, 'base64'))"
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+
+      - name: 🚀 Build APK locally (Free)
+        # We use the 'preview' profile from eas.json because it is configured to build an APK instead of AAB
+        run: eas build --platform android --profile preview --local --output twentifi.apk
+
+      - name: 🏷️ Delete Latest Tag (if exists)
+        # We delete the old 'latest' tag to recycle it so the download URL stays the exact same forever
+        run: |
+          git push --delete origin latest || true
+          git tag -d latest || true
+
+      - name: 📦 Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: twentifi.apk
+          tag_name: latest
+          name: Latest TwentiFi Build
+          body: "Automated APK build from GitHub Actions."
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

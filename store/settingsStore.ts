@@ -12,6 +12,7 @@ interface SettingsState {
   missedLogReminders: boolean;
   sarvamApiKey: string;
   geminiApiKey: string;
+  hasCompletedOnboarding: boolean;
   setUserName: (name: string) => void;
   setSarvamApiKey: (key: string) => void;
   setGeminiApiKey: (key: string) => void;
@@ -20,6 +21,7 @@ interface SettingsState {
   setLoggingInterval: (interval: number) => void;
   toggleActivityPrompts: () => Promise<void>;
   toggleMissedLogReminders: () => Promise<void>;
+  setHasCompletedOnboarding: (val: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -33,9 +35,11 @@ export const useSettingsStore = create<SettingsState>()(
       missedLogReminders: true,
       sarvamApiKey: '',
       geminiApiKey: '',
+      hasCompletedOnboarding: false,
       setUserName: (userName) => set({ userName }),
       setSarvamApiKey: (sarvamApiKey) => set({ sarvamApiKey }),
       setGeminiApiKey: (geminiApiKey) => set({ geminiApiKey }),
+      setHasCompletedOnboarding: (hasCompletedOnboarding) => set({ hasCompletedOnboarding }),
       setStartOfDay: (startOfDay) => set({ startOfDay }),
       setEndOfDay: (endOfDay) => set({ endOfDay }),
       setLoggingInterval: async (loggingInterval) => {

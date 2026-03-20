@@ -10,6 +10,7 @@ import { initDB } from '@/services/database';
 import { useLogStore } from '@/store/logStore';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useSettingsStore } from '@/store/settingsStore';
 
 // Configure how notifications are handled when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -28,6 +29,7 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const { hasCompletedOnboarding } = useSettingsStore();
 
   // Initialize DB and load logs
   React.useEffect(() => {
@@ -53,10 +55,21 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, []);
 
+  // Redirect to onboarding if not completed
+  React.useEffect(() => {
+    if (!hasCompletedOnboarding) {
+      // Small timeout to ensure router is ready
+      setTimeout(() => {
+        router.replace('/onboarding');
+      }, 0);
+    }
+  }, [hasCompletedOnboarding]);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack>
+          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="logging" options={{ presentation: 'modal', headerShown: false }} />
           

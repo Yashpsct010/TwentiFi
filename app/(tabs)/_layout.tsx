@@ -1,11 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import React from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function TabLayout() {
   useColorScheme();
+  const insets = useSafeAreaInsets();
+  
+  // Dynamic height to avoid android navigation bar overlap
+  const paddingBottom = Math.max(10, insets.bottom);
+  const height = 50 + paddingBottom;
 
   return (
     <Tabs
@@ -16,8 +22,8 @@ export default function TabLayout() {
           backgroundColor: "#0D0B1F",
           borderTopWidth: 0,
           elevation: 0,
-          height: 60,
-          paddingBottom: 10,
+          height,
+          paddingBottom,
         },
         headerShown: false,
       }}
