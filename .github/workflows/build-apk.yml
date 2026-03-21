@@ -47,20 +47,24 @@ jobs:
         # We use the 'preview' profile from eas.json because it is configured to build an APK instead of AAB
         run: eas build --platform android --profile preview --local --output twentifi.apk
 
-      - name: 🏷️ Delete Latest Tag (if exists)
-        # We delete the old 'latest' tag to recycle it so the download URL stays the exact same forever
+      - name: 🏷️ Update Latest Tag
+        # Force update the tag instead of deleting it so the release doesn't turn into a draft
         run: |
-          git push --delete origin latest || true
-          git tag -d latest || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -fa latest -m "Update latest tag"
+          git push origin latest --force
 
-      - name: 📦 Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: twentifi.apk
-          tag_name: latest
-          name: Latest TwentiFi Build
-          body: "Automated APK build from GitHub Actions."
-          draft: false
-          prerelease: false
+      - name: 📦 Create or Update GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # If the release already exists, we upload and overwrite the APK.
+          # If it doesn't exist, we create it and mark it as the latest release.
+          if gh release view latest > /dev/null 2>&1; then
+            echo "Release 'latest' exists, updating asset..."
+            gh release upload latest twentifi.apk --clobber
+          else
+            echo "Release 'latest' does not exist, creating..."
+            gh release create latest twentifi.apk --title "Latest TwentiFi Build" --notes "Automated APK build from GitHub Actions." --latest
+          fi
