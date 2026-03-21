@@ -10,11 +10,9 @@ interface SettingsState {
   loggingInterval: number; // in minutes
   activityPrompts: boolean;
   missedLogReminders: boolean;
-  sarvamApiKey: string;
   geminiApiKey: string;
   hasCompletedOnboarding: boolean;
   setUserName: (name: string) => void;
-  setSarvamApiKey: (key: string) => void;
   setGeminiApiKey: (key: string) => void;
   setStartOfDay: (time: string) => void;
   setEndOfDay: (time: string) => void;
@@ -33,11 +31,9 @@ export const useSettingsStore = create<SettingsState>()(
       loggingInterval: 20,
       activityPrompts: true,
       missedLogReminders: true,
-      sarvamApiKey: '',
       geminiApiKey: '',
       hasCompletedOnboarding: false,
       setUserName: (userName) => set({ userName }),
-      setSarvamApiKey: (sarvamApiKey) => set({ sarvamApiKey }),
       setGeminiApiKey: (geminiApiKey) => set({ geminiApiKey }),
       setHasCompletedOnboarding: (hasCompletedOnboarding) => set({ hasCompletedOnboarding }),
       setStartOfDay: (startOfDay) => set({ startOfDay }),

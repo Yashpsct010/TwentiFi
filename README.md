@@ -1,29 +1,30 @@
 # TwentiFi ⚡️
 
-**The 25-minute life-logger for the ultra-productive.**
+**The 20-minute life-logger for the ultra-productive.**
 
-TwentiFi (formerly *The 25*) is a mobile-first habit tracker designed to capture the "reality of your day" in 20-minute pulses. Instead of asking what you *plan* to do, TwentiFi asks: **"What did you actually do?"**
+TwentiFi is a mobile-first lifestyle companion designed to capture the "reality of your day" in 20-minute pulses. Instead of planning your future, TwentiFi asks: **"What did you actually do?"** and uses AI to generate insights on your vibe.
 
 ---
 
 ## 🚀 Vision
-Most apps focus on the future (calendars/todos). TwentiFi focuses on the **present**. By prompting you every 20 minutes, it builds a high-resolution timeline of your life, usage patterns, and productivity levels, then uses AI to coach you into a better version of yourself.
+Most apps focus on the future (calendars/todos). TwentiFi focuses on the **present**. By prompting you every 20 minutes, it builds a high-resolution timeline of your life, usage patterns, and productivity levels, then uses the Gemini AI to coach you into a better version of yourself.
 
 ## ✨ Key Features
-- **The 20-Minute Pulse**: Integrated notification system that prompts you every 20 minutes.
+- **The 20-Minute Pulse**: Integrated notification system that prompts you autonomously.
 - **5-Second Logging**: Optimized UI for near-instant logging via voice or text.
-- **Sarvam AI Transcription**: High-quality, context-aware speech-to-text for India-native accents and multilingual environments.
-- **Gen-Z AI Insights**: Powered by **Gemini 3.1 Flash-Lite** to provide vibey, chaotic, yet deeply helpful productivity feedback.
-- **Interactive Stats**: Real-time productivity scores, focus streaks, and activity breakdown charts.
+- **Voice AI Transcription**: Powered natively by **Gemini 3.1 Flash-Lite** for perfect context-aware speech-to-text.
+- **Gen-Z AI Insights**: Deeply personalized productivity feedback and push notification generation.
+- **Interactive Streak Calendar**: Visualize your 6-month consistency in a gorgeous Leetcode-style activity grid.
+- **Promotional Website**: A beautiful glassmorphism landing page located in `website/` with automated APK GitHub Action build workflows.
 - **Local-First Privacy**: Your logs live in a high-performance **SQLite** database on your device.
 
 ## 🛠 Tech Stack
-- **Framework**: [Expo](https://expo.dev) (React Native) + [Expo Router](https://docs.expo.dev/router/introduction)
-- **Styling**: [NativeWind](https://www.nativewind.dev/) (Tailwind CSS for Native)
+- **Framework**: [Expo](https://expo.dev) (React Native) + [Expo Router](https://docs.expo.dev/router/introduction) + [Vite React (Website)](https://vitejs.dev/)
+- **Styling**: [NativeWind](https://www.nativewind.dev/) (Tailwind CSS for Native & Web)
 - **State**: [Zustand](https://github.com/pmndrs/zustand) (Persistence via AsyncStorage)
 - **Database**: [Expo SQLite](https://docs.expo.dev/versions/latest/sdk/sqlite/)
-- **AI/LLM**: Google Gemini 3.1 via **Firebase Vertex AI**
-- **STT**: [Sarvam AI](https://www.sarvam.ai/) REST API
+- **AI/LLM**: Google Gemini 3.1 Flash-Lite REST API
+- **Deployment**: Zero-cost automated APK generation via `.github/workflows` to GitHub Releases.
 
 ---
 
@@ -35,32 +36,37 @@ Most apps focus on the future (calendars/todos). TwentiFi focuses on the **prese
 
 ### 2. Installation
 ```bash
+# Install App Dependencies
+npm install
+
+# Install Website Dependencies
+cd website
 npm install
 ```
 
 ### 3. API Keys
-To unlock full functionality, enter your keys in the **Settings** screen within the app:
-- **Gemini API Key**: For notifications and insights.
-- **Sarvam API Key**: For voice transcription accuracy.
+To unlock full AI functionality, generate a free API Key from [Google AI Studio](https://aistudio.google.com/app/apikey) and enter it during the TwentiFi app **Onboarding** or in the **Settings** screen!
 
 ### 4. Running Locally
 ```bash
-# Start with version check skip (if network issues occur)
-$env:EXPO_OFFLINE="1"; npx expo start -c
+# Start Mobile App
+npx expo start -c
 
-# Normal start
-npx expo start
+# Start Website
+cd website
+npm run dev
 ```
 
 ---
 
 ## 📂 Project Structure
 ```text
-app/          # Expo Router pages (Tabs & Modals)
-components/   # Reusable UI components
-services/     # SQLite, Gemini, Sarvam, and Notification logic
-store/        # Zustand stores for logs and sessions
-hooks/        # Custom React hooks
+app/          # Expo Router pages (Tabs & Modals, with Onboarding)
+assets/       # Images and splash screens
+components/   # Reusable UI components (StreakCalendar, etc.)
+services/     # SQLite, Gemini REST APIs, and Notification logic
+store/        # Zustand stores for logs, user settings, and sessions
+website/      # React Vite promotional website
 ```
 
 ## 📜 License

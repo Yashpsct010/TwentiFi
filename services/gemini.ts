@@ -1,6 +1,6 @@
 import { LogEntry } from "./database";
 import { getSettings } from "@/store/settingsStore"; // We'll need a way to get the key without the hook if calling from background
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from "react-native";
 
 // Safe import for Firebase SDK
@@ -189,7 +189,7 @@ export const transcribeWithGemini = async (
         {
           parts: [
             { text: "Accurately transcribe the speech in the following audio. Reply only with the final transcript text, with no extra framing, markdown formatting, or preamble." },
-            { inline_data: { mime_type: mimeType, data: base64Audio } }
+            { inlineData: { mimeType: mimeType, data: base64Audio } }
           ]
         }
       ]

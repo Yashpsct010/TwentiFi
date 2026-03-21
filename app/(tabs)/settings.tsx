@@ -31,9 +31,7 @@ export default function SettingsScreen() {
     setLoggingInterval,
     activityPrompts,
     missedLogReminders,
-    sarvamApiKey,
     geminiApiKey,
-    setSarvamApiKey,
     setGeminiApiKey,
     toggleActivityPrompts,
     toggleMissedLogReminders,
@@ -102,32 +100,7 @@ export default function SettingsScreen() {
               placeholderTextColor="#4B5563"
             />
           </View>
-          <View className="bg-brand-card p-5 rounded-[24px] mb-3 border border-white/5">
-            <View className="flex-row items-center mb-4">
-              <Ionicons name="key-outline" size={20} color="#8B5CF6" />
-              <Text className="ml-3 text-white font-medium">
-                Sarvam AI API Key
-              </Text>
-            </View>
-            <TextInput
-              className="bg-brand-bg text-white p-4 rounded-2xl border border-white/10"
-              value={sarvamApiKey}
-              onChangeText={setSarvamApiKey}
-              placeholder="Paste your API key here"
-              placeholderTextColor="#4B5563"
-              secureTextEntry
-            />
-            <View className="flex-row items-center justify-between mt-3">
-              <Text className="text-white/30 text-[10px] font-medium uppercase tracking-widest leading-relaxed flex-1">
-                Required for Speech-to-Text
-              </Text>
-              <TouchableOpacity onPress={() => Linking.openURL('https://dashboard.sarvam.ai/')}>
-                <Text className="text-[#8B5CF6] text-[10px] font-bold uppercase tracking-widest">
-                  Get Key
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+
           <View className="bg-brand-card p-5 rounded-[24px] mb-3 border border-white/5">
             <View className="flex-row items-center mb-4">
               <Ionicons name="sparkles-outline" size={20} color="#8B5CF6" />
@@ -278,7 +251,7 @@ export default function SettingsScreen() {
 
         <View className="items-center mt-8 mb-12">
           <Text className="text-brand-subtext text-[10px] font-bold uppercase tracking-[4px]">
-            The 25 v1.0.0 (MVP)
+            TwentiFi v1.0.0 (MVP)
           </Text>
         </View>
       </ScrollView>

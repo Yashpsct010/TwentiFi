@@ -10,6 +10,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -37,7 +39,7 @@ const SLIDES = [
   {
     id: '4',
     title: 'Powered by Gemini',
-    description: 'Enter your Gemini API key to unlock AI features. You can get one for free from Google AI Studio.',
+    description: 'Paste your free API key to unlock the AI.',
     icon: 'sparkles' as const,
   },
 ];
@@ -71,20 +73,32 @@ export default function OnboardingScreen() {
   };
 
   const renderItem = ({ item, index }: { item: typeof SLIDES[0]; index: number }) => {
-    return (
-      <View style={{ width }} className="flex-1 items-center justify-center px-8">
-        <View className="w-32 h-32 rounded-full bg-brand-purple/20 items-center justify-center mb-8 border border-brand-purple/50">
+    const content = (
+      <>
+        <View className={`w-32 h-32 rounded-full bg-brand-purple/20 items-center justify-center border border-brand-purple/50 ${index === 3 ? 'mb-4 mt-8' : 'mb-8'}`}>
           <Ionicons name={item.icon} size={64} color="#8B5CF6" />
         </View>
-        <Text className="text-3xl font-black text-white mb-4 text-center tracking-wide">
+        <Text className={`text-3xl font-black text-white text-center tracking-wide ${index === 3 ? 'mb-2' : 'mb-4'}`}>
           {item.title}
         </Text>
-        <Text className="text-brand-subtext text-center text-lg leading-relaxed mb-12">
+        <Text className={`text-brand-subtext text-center text-lg leading-relaxed ${index === 3 ? 'mb-6' : 'mb-12'}`}>
           {item.description}
         </Text>
 
         {index === 3 && (
-          <View className="w-full mt-4">
+          <View className="w-full">
+            <View className="flex-row items-center justify-center mb-6 py-2 px-4 rounded-full bg-brand-purple/20 self-center border border-brand-purple/30">
+              <Text className="text-brand-purple font-black text-[10px] uppercase tracking-widest mr-2">
+                Scroll Down for Setup
+              </Text>
+              <Ionicons name="chevron-down" size={14} color="#8B5CF6" />
+            </View>
+
+            <Image 
+              source={require('@/assets/images/aistudio-guide.gif')} 
+              className="w-full h-[320px] mb-8"
+              resizeMode="contain"
+            />
             <View className="bg-brand-card p-4 rounded-2xl border border-white/5 flex-row items-center mb-4">
               <Ionicons name="key-outline" size={20} color="#9CA3AF" />
               <TextInput
@@ -97,13 +111,32 @@ export default function OnboardingScreen() {
                 autoCapitalize="none"
               />
             </View>
-            <TouchableOpacity onPress={openAiStudio} className="mb-4">
+            <TouchableOpacity onPress={openAiStudio} className="mb-8">
               <Text className="text-brand-purple text-center font-bold underline">
                 Get a free API key from Google AI Studio
               </Text>
             </TouchableOpacity>
           </View>
         )}
+      </>
+    );
+
+    if (index === 3) {
+      return (
+        <ScrollView 
+          style={{ width }} 
+          className="flex-1 px-8" 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ alignItems: 'center', paddingTop: 20, paddingBottom: 40 }}
+        >
+          {content}
+        </ScrollView>
+      );
+    }
+
+    return (
+      <View style={{ width }} className="flex-1 items-center justify-center px-8">
+        {content}
       </View>
     );
   };
