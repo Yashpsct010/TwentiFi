@@ -42,6 +42,15 @@ export async function requestPermissions() {
     // We can still request local notification permissions if needed
   }
 
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'Logs & Reminders',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#8B5CF6',
+    });
+  }
+
   try {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
@@ -75,8 +84,6 @@ export async function scheduleLoggingNotification(
   }
 
   try {
-    await Notifications.cancelAllScheduledNotificationsAsync();
-
     await Notifications.scheduleNotificationAsync({
       content: {
         title: notificationContent.title,

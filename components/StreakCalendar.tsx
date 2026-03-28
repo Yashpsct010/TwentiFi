@@ -20,8 +20,8 @@ export default function StreakCalendar({ logs }: StreakCalendarProps) {
     return acc;
   }, {});
 
-  // Generate last 6 months (approx 26 weeks * 7 = 182 days)
-  const WEEKS = 26;
+  // Generate last 4 months (18 weeks * 7 = 126 days)
+  const WEEKS = 18;
   const DAYS = WEEKS * 7;
   
   const today = new Date();
@@ -60,12 +60,17 @@ export default function StreakCalendar({ logs }: StreakCalendarProps) {
 
   return (
     <View className="bg-brand-card p-6 rounded-[32px] border border-white/5">
-      <Text className="text-white font-bold mb-4 tracking-widest uppercase text-xs">
-        Consistency (Last 6 Months)
+      <Text className="text-white font-bold mb-4 tracking-widest uppercase text-xs text-center">
+        Consistency (Last 4 Months)
       </Text>
       
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 20 }}>
-        <View className="flex-row">
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        className="w-full"
+        contentContainerStyle={{ flexGrow: 1 }}
+      >
+        <View className="flex-row self-center">
           {grid.map((week, weekIndex) => (
             <View key={weekIndex} className="flex-col mr-1">
               {week.map((day, dayIndex) => (

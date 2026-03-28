@@ -143,8 +143,16 @@ export default function LoggingScreen() {
 
   async function startRecording() {
     try {
-      console.log("Requesting permissions..");
-      const { granted } = await requestRecordingPermissionsAsync();
+      console.log("Checking permissions..");
+      const currentAudioPerm = await Audio.getPermissionsAsync();
+      let granted = currentAudioPerm.granted;
+      
+      if (!granted) {
+        console.log("Requesting audio permissions..");
+        const res = await requestRecordingPermissionsAsync();
+        granted = res.granted;
+      }
+
       if (!granted) {
         console.warn("Audio permissions not granted");
         return;
@@ -154,10 +162,22 @@ export default function LoggingScreen() {
       let speechPerm = { granted: false };
 
       if (sttAvailable) {
-        speechPerm =
-          await ExpoSpeechRecognitionModule.requestPermissionsAsync().catch(
+        // Assume STT needs its own permission check, catch error if module doesn't have getPermissionsAsync
+        let hasSpeechPerm = false;
+        try {
+          if (ExpoSpeechRecognitionModule.getPermissionsAsync) {
+            const currentSpeechPerm = await ExpoSpeechRecognitionModule.getPermissionsAsync();
+            hasSpeechPerm = currentSpeechPerm.granted;
+          }
+        } catch(e) {}
+
+        if (!hasSpeechPerm) {
+          speechPerm = await ExpoSpeechRecognitionModule.requestPermissionsAsync().catch(
             () => ({ granted: false }),
           );
+        } else {
+          speechPerm = { granted: true };
+        }
       }
 
       // ON NATIVE: Use expo-audio for the actual recording

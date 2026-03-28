@@ -1,3 +1,4 @@
+import { expandTaskWithGemini } from "@/services/gemini";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { Ionicons } from "@expo/vector-icons";
@@ -9,16 +10,21 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
+import { TouchableOpacity as GHTouchableOpacity } from "react-native-gesture-handler";
+import DraggableFlatList from "react-native-draggable-flatlist";
 
 export default function HomeScreen() {
-  const { isActive, startTime, goals, startSession, endSession, toggleGoal } =
-    useSessionStore();
-  const { userName, startOfDay, endOfDay } = useSettingsStore();
+  const { isActive, startTime, goals, startSession, endSession, toggleGoal, addGoal, deleteGoal, replaceGoalWithMultiple, reorderGoals } = useSessionStore();
+  const { userName, startOfDay, endOfDay, geminiApiKey } = useSettingsStore();
   const [newGoal, setNewGoal] = useState("");
+  const [activeNewGoal, setActiveNewGoal] = useState("");
   const [tempGoals, setTempGoals] = useState<string[]>([]);
   const [elapsed, setElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [isExpanding, setIsExpanding] = useState<string | null>(null);
   const router = useRouter();
 
   // Track the offset to subtract from the total session time (to handle pauses and lap resets)
@@ -116,6 +122,46 @@ export default function HomeScreen() {
       setTempGoals([...tempGoals, newGoal.trim()]);
       setNewGoal("");
     }
+  };
+
+  const handleActiveAddGoal = () => {
+    if (activeNewGoal.trim()) {
+      addGoal(activeNewGoal.trim());
+      setActiveNewGoal("");
+    }
+  };
+
+  const handleTaskOptions = (goalId: string, goalText: string) => {
+    Alert.alert(
+      "Task Options",
+      `Manage "${goalText}"`,
+      [
+        {
+          text: "Expand with AI ✨",
+          onPress: async () => {
+            if (!geminiApiKey) {
+              Alert.alert("API Key Required", "Add your Gemini API key in Settings to use AI expansion.");
+              return;
+            }
+            setIsExpanding(goalId);
+            try {
+              const newTasks = await expandTaskWithGemini(goalText, geminiApiKey);
+              replaceGoalWithMultiple(goalId, newTasks);
+            } catch (err: any) {
+              Alert.alert("Expansion Failed", err.message || "Failed to expand task.");
+            } finally {
+              setIsExpanding(null);
+            }
+          }
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deleteGoal(goalId),
+        },
+        { text: "Cancel", style: "cancel" }
+      ]
+    );
   };
 
   return (
@@ -273,14 +319,22 @@ export default function HomeScreen() {
                 </Text>
               </View>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {goals.map((goal) => (
-                <TouchableOpacity
-                  key={goal.id}
-                  onPress={() => toggleGoal(goal.id)}
-                  className="flex-row items-center p-5 bg-brand-card rounded-[24px] mb-4 border border-white/5 justify-between"
-                >
-                  <View className="flex-row items-center flex-1">
+            <DraggableFlatList
+              showsVerticalScrollIndicator={false}
+              data={goals}
+              onDragEnd={({ data }) => reorderGoals(data)}
+              keyExtractor={(item) => item.id}
+              containerStyle={{ flex: 1 }}
+              renderItem={({ item: goal, drag, isActive: isDragging }) => (
+                <View className={`flex-row items-center p-5 rounded-[24px] mb-4 border border-white/5 justify-between ${isDragging ? "bg-brand-purple/20 shadow-lg scale-[1.02]" : "bg-brand-card"}`}>
+                  
+                  <GHTouchableOpacity
+                    activeOpacity={0.8}
+                    disabled={isDragging}
+                    onPress={() => toggleGoal(goal.id)}
+                    containerStyle={{ flex: 1 }}
+                    style={{ flexDirection: 'row', alignItems: 'center' }}
+                  >
                     <Ionicons
                       name={
                         goal.completed ? "checkmark-circle" : "ellipse-outline"
@@ -293,15 +347,45 @@ export default function HomeScreen() {
                     >
                       {goal.text}
                     </Text>
-                  </View>
-                  <Ionicons
-                    name="ellipsis-vertical"
-                    size={20}
-                    color="#4B5563"
+                  </GHTouchableOpacity>
+
+                  {isExpanding === goal.id ? (
+                    <ActivityIndicator size="small" color="#8B5CF6" />
+                  ) : (
+                    <View className="flex-row items-center ml-2">
+                      <GHTouchableOpacity onPressIn={drag} className="p-2 mr-2">
+                        <Ionicons name="menu" size={20} color="#4B5563" />
+                      </GHTouchableOpacity>
+                      <GHTouchableOpacity onPress={() => handleTaskOptions(goal.id, goal.text)} className="p-2">
+                        <Ionicons
+                          name="ellipsis-vertical"
+                          size={20}
+                          color="#4B5563"
+                        />
+                      </GHTouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              )}
+              ListFooterComponent={
+                <View className="flex-row mt-2 mb-8 items-center bg-brand-card p-2 rounded-2xl border border-white/5">
+                  <TextInput
+                    className="flex-1 text-white p-3 rounded-xl bg-brand-bg/50"
+                    placeholder="Need to do something else?"
+                    placeholderTextColor="#4B5563"
+                    value={activeNewGoal}
+                    onChangeText={setActiveNewGoal}
+                    onSubmitEditing={handleActiveAddGoal}
                   />
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+                  <TouchableOpacity
+                    onPress={handleActiveAddGoal}
+                    className="bg-brand-purple w-12 h-12 rounded-xl justify-center items-center ml-2 shadow-lg shadow-brand-purple/50"
+                  >
+                    <Ionicons name="add" size={24} color="white" />
+                  </TouchableOpacity>
+                </View>
+              }
+            />
           </View>
         </View>
       )}

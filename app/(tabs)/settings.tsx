@@ -39,6 +39,12 @@ export default function SettingsScreen() {
   const { logs, clearLogs } = useLogStore();
   const { endSession } = useSessionStore();
 
+  const [localInterval, setLocalInterval] = React.useState(String(loggingInterval));
+
+  React.useEffect(() => {
+    setLocalInterval(String(loggingInterval));
+  }, [loggingInterval]);
+
   const exportLogs = async () => {
     if (logs.length === 0) {
       Alert.alert("No Logs", "Capture some pulses before exporting!");
@@ -169,10 +175,16 @@ export default function SettingsScreen() {
               <View className="flex-row items-center">
                 <TextInput
                   className="bg-brand-bg text-white px-2 py-2 rounded-xl border border-white/10 w-16 text-center font-bold"
-                  value={String(loggingInterval)}
-                  onChangeText={(val) => {
-                    const num = parseInt(val.replace(/[^0-9]/g, ''), 10);
-                    if (!isNaN(num) && num > 0) setLoggingInterval(num);
+                  value={localInterval}
+                  onChangeText={setLocalInterval}
+                  onBlur={() => {
+                    const num = parseInt(localInterval.replace(/[^0-9]/g, ''), 10);
+                    if (!isNaN(num) && num > 0) {
+                      setLoggingInterval(num);
+                      setLocalInterval(String(num));
+                    } else {
+                      setLocalInterval(String(loggingInterval));
+                    }
                   }}
                   keyboardType="numeric"
                   placeholder="20"

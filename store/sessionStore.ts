@@ -17,6 +17,10 @@ interface SessionState {
   startSession: (goals: string[]) => Promise<void>;
   endSession: () => Promise<void>;
   toggleGoal: (id: string) => void;
+  addGoal: (text: string) => void;
+  deleteGoal: (id: string) => void;
+  replaceGoalWithMultiple: (id: string, newTexts: string[]) => void;
+  reorderGoals: (newGoals: { id: string; text: string; completed: boolean }[]) => void;
   rescheduleNextPulse: () => Promise<void>;
 }
 
@@ -73,6 +77,31 @@ export const useSessionStore = create<SessionState>()(
             g.id === id ? { ...g, completed: !g.completed } : g,
           ),
         })),
+      addGoal: (text) =>
+        set((state) => ({
+          goals: [
+            ...state.goals,
+            { id: Math.random().toString(36).substr(2, 9), text, completed: false },
+          ],
+        })),
+      deleteGoal: (id) =>
+        set((state) => ({
+          goals: state.goals.filter((g) => g.id !== id),
+        })),
+      replaceGoalWithMultiple: (id, newTexts) =>
+        set((state) => {
+          const index = state.goals.findIndex((g) => g.id === id);
+          if (index === -1) return state;
+          const newGoals = [...state.goals];
+          const insertedGoals = newTexts.map((text) => ({
+            id: Math.random().toString(36).substr(2, 9),
+            text,
+            completed: false,
+          }));
+          newGoals.splice(index, 1, ...insertedGoals);
+          return { goals: newGoals };
+        }),
+      reorderGoals: (newGoals) => set({ goals: newGoals }),
     }),
     {
       name: "session-storage",

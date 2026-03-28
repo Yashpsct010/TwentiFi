@@ -1,20 +1,19 @@
 import { useLogStore } from "@/store/logStore";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
+import { useInsightStore } from "@/store/insightStore";
 import { generateAIInsights, AIInsights } from "@/services/gemini";
 import StreakCalendar from "@/components/StreakCalendar";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState, useEffect } from "react";
 import { ScrollView, Text, View, ActivityIndicator } from "react-native";
 
-let insightsCache: { [key: string]: AIInsights } = {};
-
 export default function StatsScreen() {
   const { logs } = useLogStore();
   const { goals } = useSessionStore();
   const { geminiApiKey } = useSettingsStore();
+  const { aiInsights, lastPulseCount, lastTimestamp, setInsights } = useInsightStore();
 
-  const [aiInsights, setAiInsights] = useState<AIInsights | null>(null);
   const [isLoadingAI, setIsLoadingAI] = useState(false);
 
   // Calculate Productivity Score (average productivity * 20 for 0-100 scale)
@@ -59,18 +58,21 @@ export default function StatsScreen() {
     async function fetchInsights() {
       if (!geminiApiKey || logs.length === 0) return;
 
-      // Unique key based on logs count and last timestamp
-      const cacheKey = `${logs.length}-${logs[0]?.timestamp}`;
-      if (insightsCache[cacheKey]) {
-        setAiInsights(insightsCache[cacheKey]);
-        return;
+      const currentLatestTimestamp = logs[0]?.timestamp || null;
+
+      // Only generate if we don't have insights OR the logs have changed since the last generated insight
+      if (
+        aiInsights &&
+        lastPulseCount === logs.length &&
+        lastTimestamp === currentLatestTimestamp
+      ) {
+        return; // We have up-to-date insights cached
       }
 
       setIsLoadingAI(true);
       try {
         const insights = await generateAIInsights(logs, geminiApiKey);
-        setAiInsights(insights);
-        insightsCache[cacheKey] = insights;
+        setInsights(insights, logs.length, currentLatestTimestamp || "");
       } catch (error) {
         console.error("Failed to fetch AI insights:", error);
       } finally {
@@ -78,7 +80,7 @@ export default function StatsScreen() {
       }
     }
     fetchInsights();
-  }, [logs, geminiApiKey]);
+  }, [logs, geminiApiKey, aiInsights, lastPulseCount, lastTimestamp, setInsights]);
 
   return (
     <View className="flex-1 bg-brand-bg pt-12">

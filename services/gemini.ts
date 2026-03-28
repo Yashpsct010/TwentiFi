@@ -1,5 +1,5 @@
 import { LogEntry } from "./database";
-import { getSettings } from "@/store/settingsStore"; // We'll need a way to get the key without the hook if calling from background
+
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from "react-native";
 
@@ -7,7 +7,7 @@ import { Platform } from "react-native";
 let FirebaseVertexAI: any = null;
 try {
   FirebaseVertexAI = require("@react-native-firebase/vertexai");
-} catch (e) {
+} catch {
   console.log("[Gemini] Firebase Vertex AI SDK not available in this environment (likely Expo Go). Falling back to REST API.");
 }
 
@@ -251,3 +251,37 @@ export const generateNotificationContent = async (
       return { title: "Bro, you ghosted? \uD83D\uDC7B", body: "We need that log update ASAP." };
   }
 };
+
+/**
+ * Expands a simple task into actionable sub-tasks using Gemini.
+ */
+export const expandTaskWithGemini = async (
+  task: string,
+  apiKey: string
+): Promise<string[]> => {
+  if (!apiKey) {
+    throw new Error("API key missing. Add it in Settings to enable AI expansion.");
+  }
+
+  const prompt = `
+    I have a daily goal/task: "${task}"
+    Break this down into 3-5 small, highly actionable, specific sub-tasks or steps.
+    Keep them very short (under 8 words each). 
+    Return ONLY a JSON array of strings. Example: ["Warm up 5 mins", "Run 2 miles", "Stretch 5 mins"]
+    Do not add any markdown, markdown fences, or text outside the JSON array.
+  `;
+
+  try {
+    const responseText = await callGemini(prompt, apiKey);
+    const parsed = extractJSON(responseText);
+    
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed.map(String);
+    }
+    throw new Error("Invalid response format: Expected an array of strings.");
+  } catch (err) {
+    console.error("Failed to expand task with AI:", err);
+    throw new Error("Failed to expand task. Check your API key or try again.");
+  }
+};
+
