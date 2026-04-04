@@ -12,6 +12,8 @@ interface SettingsState {
   missedLogReminders: boolean;
   geminiApiKey: string;
   hasCompletedOnboarding: boolean;
+  theme: 'light' | 'dark';
+  customTags: string[];
   setUserName: (name: string) => void;
   setGeminiApiKey: (key: string) => void;
   setStartOfDay: (time: string) => void;
@@ -20,6 +22,9 @@ interface SettingsState {
   toggleActivityPrompts: () => Promise<void>;
   toggleMissedLogReminders: () => Promise<void>;
   setHasCompletedOnboarding: (val: boolean) => void;
+  setTheme: (theme: 'light' | 'dark') => void;
+  addCustomTag: (tag: string) => void;
+  removeCustomTag: (tag: string) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -33,11 +38,21 @@ export const useSettingsStore = create<SettingsState>()(
       missedLogReminders: true,
       geminiApiKey: '',
       hasCompletedOnboarding: false,
+      theme: 'light',
+      customTags: [],
       setUserName: (userName) => set({ userName }),
       setGeminiApiKey: (geminiApiKey) => set({ geminiApiKey }),
       setHasCompletedOnboarding: (hasCompletedOnboarding) => set({ hasCompletedOnboarding }),
+      setTheme: (theme) => set({ theme }),
       setStartOfDay: (startOfDay) => set({ startOfDay }),
       setEndOfDay: (endOfDay) => set({ endOfDay }),
+      addCustomTag: (tag) => set((state) => {
+        if (state.customTags.length >= 5 || state.customTags.includes(tag.trim())) return state;
+        return { customTags: [...state.customTags, tag.trim()] };
+      }),
+      removeCustomTag: (tag) => set((state) => ({
+        customTags: state.customTags.filter((t) => t !== tag)
+      })),
       setLoggingInterval: async (loggingInterval) => {
         set({ loggingInterval });
         // If there's an active session, reschedule with the new interval

@@ -8,8 +8,15 @@ import * as Notifications from 'expo-notifications';
 import React from 'react';
 import { initDB } from '@/services/database';
 import { useLogStore } from '@/store/logStore';
+import { View } from 'react-native';
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSettingsStore } from '@/store/settingsStore';
 
 // Configure how notifications are handled when the app is in the foreground
@@ -28,8 +35,14 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const { hasCompletedOnboarding } = useSettingsStore();
+  const { hasCompletedOnboarding, theme } = useSettingsStore();
+
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
 
   // Initialize DB and load logs
   React.useEffect(() => {
@@ -58,23 +71,33 @@ export default function RootLayout() {
   // Redirect to onboarding if not completed
   React.useEffect(() => {
     if (!hasCompletedOnboarding) {
-      // Small timeout to ensure router is ready
       setTimeout(() => {
         router.replace('/onboarding');
       }, 0);
     }
   }, [hasCompletedOnboarding]);
 
+  // Wait for fonts before rendering
+  if (!fontsLoaded) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: theme === 'dark' ? '#0D0B1F' : '#FAFAF8',
+        }}
+      />
+    );
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <ThemeProvider value={theme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack>
           <Stack.Screen name="onboarding" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="logging" options={{ presentation: 'modal', headerShown: false }} />
-          
         </Stack>
-        <StatusBar style="auto" />
+        <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       </ThemeProvider>
     </GestureHandlerRootView>
   );

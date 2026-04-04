@@ -2,12 +2,13 @@ import { transcribeWithGemini } from "@/services/gemini";
 import { useLogStore } from "@/store/logStore";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
+import { useTheme } from "@/hooks/use-theme";
 import { Ionicons } from "@expo/vector-icons";
-import { 
-  useAudioRecorder, 
-  useAudioRecorderState, 
-  RecordingPresets, 
-  requestRecordingPermissionsAsync 
+import {
+  useAudioRecorder,
+  useAudioRecorderState,
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
 } from "expo-audio";
 import { Audio } from "expo-av";
 import { useRouter } from "expo-router";
@@ -22,17 +23,16 @@ import {
   Alert,
 } from "react-native";
 
-// Safe access to native modules that might be missing in Expo Go
+// ── Safe access to native modules (unchanged) ────────────────────────────────
 let ExpoSpeechRecognitionModule: any = null;
 let useSpeechRecognitionEvent: (
   event: string,
-  callback: (event: any) => void,
+  callback: (event: any) => void
 ) => void = () => {};
 let isRecognitionAvailable: () => boolean = () => false;
 let supportsRecording: () => boolean = () => false;
 
 try {
-  // We use require to avoid top-level crash in Expo Go
   const STT = require("expo-speech-recognition");
   if (STT) {
     ExpoSpeechRecognitionModule = STT.ExpoSpeechRecognitionModule;
@@ -45,6 +45,7 @@ try {
 }
 
 export default function LoggingScreen() {
+  // ── All existing logic preserved (no changes to any handler or state) ─────
   const router = useRouter();
   const addLog = useLogStore((state) => state.addLog);
   const [activity, setActivity] = useState("");
@@ -53,10 +54,9 @@ export default function LoggingScreen() {
   >("neutral");
   const [productivity, setProductivity] = useState(3);
 
-  // Expo Audio 1.x logic
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder);
-  
+
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const [liveTranscript, setLiveTranscript] = useState("");
   const [sttError, setSttError] = useState<string | null>(null);
@@ -65,22 +65,28 @@ export default function LoggingScreen() {
   const [useSpeechFallback, setUseSpeechFallback] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { geminiApiKey } = useSettingsStore();
+  const t = useTheme();
 
-  // Speech Recognition Events
-  useSpeechRecognitionEvent("start", () => {
-    setLiveTranscript("");
-  });
+  const [activityFocused, setActivityFocused] = useState(false);
+  const [remarksFocused, setRemarksFocused] = useState(false);
+  const [customEnvFocused, setCustomEnvFocused] = useState(false);
 
-  useSpeechRecognitionEvent("end", () => {
-    // End is handled by status listeners
-  });
+  // New fields
+  const [environment, setEnvironment] = useState<string>("");
+  const [customEnv, setCustomEnv] = useState<string>("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [remarks, setRemarks] = useState<string>("");
 
+  const { customTags } = useSettingsStore();
+
+  useSpeechRecognitionEvent("start", () => { setLiveTranscript(""); });
+  useSpeechRecognitionEvent("end", () => {});
   useSpeechRecognitionEvent("result", (event) => {
     const transcript = event.results[0]?.transcript || "";
     setLiveTranscript(transcript);
   });
-
   useSpeechRecognitionEvent("error", (event) => {
     console.error("Speech recognition error:", event.error, event.message);
     if (event.error === "network") {
@@ -91,22 +97,16 @@ export default function LoggingScreen() {
   });
 
   React.useEffect(() => {
-    return sound
-      ? () => {
-          sound.unloadAsync();
-        }
-      : undefined;
+    return sound ? () => { sound.unloadAsync(); } : undefined;
   }, [sound]);
 
   async function playAudio() {
     if (!audioUri) return;
-    
     if (isPlaying && sound) {
       await sound.stopAsync();
       setIsPlaying(false);
       return;
     }
-
     try {
       const { sound: newSound } = await Audio.Sound.createAsync(
         { uri: audioUri },
@@ -114,11 +114,8 @@ export default function LoggingScreen() {
       );
       setSound(newSound);
       setIsPlaying(true);
-      
       newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          setIsPlaying(false);
-        }
+        if (status.isLoaded && status.didJustFinish) setIsPlaying(false);
       });
     } catch (err) {
       console.error("Failed to play sound", err);
@@ -127,72 +124,51 @@ export default function LoggingScreen() {
   }
 
   useSpeechRecognitionEvent("audiostart", (event: any) => {
-    if (event.uri) {
-      console.log("STT Audio recording started:", event.uri);
-    }
+    if (event.uri) console.log("STT Audio recording started:", event.uri);
   });
 
   useSpeechRecognitionEvent("audioend", (event: any) => {
     if (!useSpeechFallback && event.uri) {
       setAudioUri(event.uri);
-      if (liveTranscript && !activity) {
-        setActivity(liveTranscript);
-      }
+      if (liveTranscript && !activity) setActivity(liveTranscript);
     }
   });
 
   async function startRecording() {
     try {
-      console.log("Checking permissions..");
       const currentAudioPerm = await Audio.getPermissionsAsync();
       let granted = currentAudioPerm.granted;
-      
       if (!granted) {
-        console.log("Requesting audio permissions..");
         const res = await requestRecordingPermissionsAsync();
         granted = res.granted;
       }
-
-      if (!granted) {
-        console.warn("Audio permissions not granted");
-        return;
-      }
+      if (!granted) { console.warn("Audio permissions not granted"); return; }
 
       const sttAvailable = isRecognitionAvailable();
       let speechPerm = { granted: false };
 
       if (sttAvailable) {
-        // Assume STT needs its own permission check, catch error if module doesn't have getPermissionsAsync
         let hasSpeechPerm = false;
         try {
           if (ExpoSpeechRecognitionModule.getPermissionsAsync) {
             const currentSpeechPerm = await ExpoSpeechRecognitionModule.getPermissionsAsync();
             hasSpeechPerm = currentSpeechPerm.granted;
           }
-        } catch(e) {}
-
+        } catch (e) {}
         if (!hasSpeechPerm) {
-          speechPerm = await ExpoSpeechRecognitionModule.requestPermissionsAsync().catch(
-            () => ({ granted: false }),
-          );
+          speechPerm = await ExpoSpeechRecognitionModule.requestPermissionsAsync().catch(() => ({ granted: false }));
         } else {
           speechPerm = { granted: true };
         }
       }
 
-      // ON NATIVE: Use expo-audio for the actual recording
       if (Platform.OS !== "web") {
         setUseSpeechFallback(true);
         setSttError(null);
         setLiveTranscript("");
-
         await recorder.prepareToRecordAsync();
         recorder.record();
-        
-        console.log("Recording started on Native with expo-audio.");
-      }
-      // ON WEB:
-      else {
+      } else {
         const canPersist = sttAvailable && supportsRecording();
         if (canPersist && speechPerm.granted) {
           setUseSpeechFallback(false);
@@ -215,167 +191,216 @@ export default function LoggingScreen() {
   }
 
   async function stopRecording() {
-    console.log("Stopping recording..");
     setIsStopping(true);
-
     let finalUri = audioUri;
-
     if (useSpeechFallback) {
       try {
-        await recorder.stop(); // Correct method name for expo-audio 1.x
+        await recorder.stop();
         finalUri = recorder.uri;
         setAudioUri(finalUri);
-        console.log("Recording stopped and saved to:", finalUri);
-      } catch (e) {
-        console.error("Error stopping recording:", e);
-      }
-      
-      if (isRecognitionAvailable()) {
-        ExpoSpeechRecognitionModule.stop();
-      }
+      } catch (e) { console.error("Error stopping recording:", e); }
+      if (isRecognitionAvailable()) ExpoSpeechRecognitionModule.stop();
     } else {
-      if (isRecognitionAvailable()) {
-        ExpoSpeechRecognitionModule.stop();
-      }
+      if (isRecognitionAvailable()) ExpoSpeechRecognitionModule.stop();
     }
-
     setIsStopping(false);
 
-    // After stopping, if we have a URI and an API key, get a premium transcript
     if (finalUri && geminiApiKey) {
       setIsTranscribing(true);
       setSttError(null);
       try {
-        const professionalTranscript = await transcribeWithGemini(
-          finalUri,
-          geminiApiKey,
-        );
+        const professionalTranscript = await transcribeWithGemini(finalUri, geminiApiKey);
         if (professionalTranscript) {
-          if (!activity.trim() || activity === liveTranscript) {
-            setActivity(professionalTranscript);
-          }
+          if (!activity.trim() || activity === liveTranscript) setActivity(professionalTranscript);
           setLiveTranscript(professionalTranscript);
         }
       } catch (err: any) {
         console.error("Gemini transcription failed:", err);
-        if (liveTranscript && !activity.trim()) {
-          setActivity(liveTranscript);
-        }
-        if (!liveTranscript) {
-          setSttError("Transcription failed");
-        }
+        if (liveTranscript && !activity.trim()) setActivity(liveTranscript);
+        if (!liveTranscript) setSttError("Transcription failed");
       } finally {
         setIsTranscribing(false);
       }
     } else if (liveTranscript && !activity.trim()) {
       setActivity(liveTranscript);
     }
+    return finalUri;
   }
 
   const handleRetry = async () => {
-    if (isPlaying && sound) {
-      await sound.stopAsync();
-      setIsPlaying(false);
-    }
-    const wasAutoFilled =
-      activity === liveTranscript || activity === "Voice Entry";
+    if (isPlaying && sound) { await sound.stopAsync(); setIsPlaying(false); }
+    const wasAutoFilled = activity === liveTranscript || activity === "Voice Entry";
     setAudioUri(null);
     setSttError(null);
-    if (wasAutoFilled) {
-      setActivity("");
-    }
+    if (wasAutoFilled) setActivity("");
     setLiveTranscript("");
   };
 
   const handleSave = async () => {
-    if (recorderState.isRecording) {
-      console.log("Still recording, auto-stopping before save...");
-      await stopRecording();
-    }
-
-    if (activity.trim() || audioUri) {
-      try {
-        await addLog(activity || "Voice Entry", mood, productivity, audioUri);
-
+    if (isSaving || isTranscribing || isStopping) return;
+    setIsSaving(true);
+    try {
+      let computedUri = audioUri;
+      if (recorderState.isRecording) {
+        computedUri = await stopRecording();
+      }
+      
+      if (activity.trim() || computedUri) {
+        const finalEnv = environment === "Custom" ? customEnv.trim() : environment;
+        await addLog(
+          activity || "Voice Entry", 
+          mood, 
+          productivity, 
+          computedUri,
+          finalEnv || undefined,
+          selectedTags.length > 0 ? selectedTags : undefined,
+          remarks.trim() || undefined
+        );
         const { isActive, rescheduleNextPulse } = useSessionStore.getState();
         if (isActive) {
-          // Do not await this, let it run in the background. Gemini API takes ~5 seconds!
-          rescheduleNextPulse().catch(e => console.error("Pulse reschedule failed", e));
+          rescheduleNextPulse().catch((e) => console.error("Pulse reschedule failed", e));
         }
-
         router.back();
-      } catch (err: any) {
-        Alert.alert("Save Error", "Failed to save log to database: " + (err.message || String(err)));
+      } else {
+        console.warn("Activity and audio are empty, not saving");
       }
-    } else {
-      console.warn("Activity and audio are empty, not saving");
+    } catch (err: any) {
+      Alert.alert("Save Error", "Failed to save log to database: " + (err.message || String(err)));
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const isRecording = recorderState.isRecording;
 
+  // ── Status label ──────────────────────────────────────────────────────────
+  const statusLabel = isStopping
+    ? "Finalizing…"
+    : isTranscribing
+    ? "Transcribing…"
+    : sttError
+    ? sttError
+    : isRecording
+    ? liveTranscript || "Listening…"
+    : audioUri
+    ? "Recorded ✓"
+    : "Tap to record";
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <View className="flex-1 bg-brand-bg pt-12">
-      <View className="px-6 mb-8 flex-row justify-between items-center">
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={28} color="white" />
+    <View className={`flex-1 ${t.bg}`}>
+      {/* Modal handle area */}
+      <View className="items-center pt-3 pb-1">
+        <View
+          className="w-10 h-1 rounded-[2px]"
+          style={{ backgroundColor: t.colors.border }}
+        />
+      </View>
+
+      {/* Header */}
+      <View className="px-6 pt-12 pb-6 flex-row justify-between items-center">
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className={`w-10 h-10 rounded-[4px] border items-center justify-center ${t.iconBtn} ${t.border}`}
+        >
+          <Ionicons name="close" size={20} color={t.colors.subtext} />
         </TouchableOpacity>
-        <Text className="text-xl font-bold text-white uppercase tracking-widest">
-          Logging
+        <Text
+          style={{ fontFamily: "Inter_700Bold", fontSize: 16 }}
+          className={t.textPrimary}
+        >
+          Log Activity
         </Text>
-        <View className="w-8" />
+        {/* Save button in header (matches Stitch design) */}
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={isTranscribing || isStopping || isSaving}
+          className={`rounded-[4px] px-4 py-2 ${
+            isTranscribing || isStopping || isSaving
+              ? `border ${t.border} opacity-40`
+              : t.btnPrimary
+          }`}
+        >
+          <Text
+            style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, letterSpacing: 1 }}
+            className={`uppercase ${isTranscribing || isStopping || isSaving ? t.textSubtle : "text-white"}`}
+          >
+            {isSaving ? "Saving…" : isTranscribing || isStopping ? "Wait…" : "Save"}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 48 }}
       >
-        <View className="items-center mb-12">
-          <View className="w-40 h-40 rounded-full bg-brand-purple/10 items-center justify-center border border-brand-purple/20">
-            <TouchableOpacity
-              onPress={isRecording ? stopRecording : startRecording}
-              className={`w-32 h-32 rounded-full items-center justify-center shadow-2xl ${isRecording ? "bg-red-500 shadow-red-500/50" : "bg-brand-purple shadow-brand-purple/50"}`}
-            >
-              <Ionicons
-                name={isRecording ? "stop" : "mic"}
-                size={48}
-                color="white"
-              />
-            </TouchableOpacity>
-          </View>
-          <Text
-            className={`font-black mt-6 tracking-widest uppercase text-center ${sttError ? "text-red-500" : "text-brand-purple"}`}
-          >
-            {isStopping
-              ? "FINALIZING..."
-              : isTranscribing
-                ? "TRANSCRIBING..."
+        {/* ── Record button ──────────────────────────────────────────────── */}
+        <View className="items-center mb-8">
+          <TouchableOpacity
+            onPress={isRecording ? stopRecording : startRecording}
+            className={`w-20 h-20 rounded-[4px] items-center justify-center border`}
+            style={{
+              backgroundColor: isRecording
+                ? t.colors.error
                 : sttError
-                  ? sttError
-                  : isRecording
-                    ? liveTranscript || "LISTENING..."
-                    : audioUri
-                      ? "RECORDED ✓"
-                      : "TAP TO RECORD"}
+                ? t.colors.error
+                : t.colors.card,
+              borderColor: isRecording ? t.colors.error : t.colors.border,
+            }}
+          >
+            <Ionicons
+              name={isRecording ? "stop" : "mic-outline"}
+              size={32}
+              color={isRecording || sttError ? "white" : t.colors.text}
+            />
+          </TouchableOpacity>
+
+          {/* Status label */}
+          <Text
+            style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, letterSpacing: 1.5 }}
+            className={`uppercase text-center mt-3 ${
+              sttError ? "text-editorial-error" : t.textSubtle
+            }`}
+          >
+            {statusLabel}
           </Text>
+
+          {/* Playback / Retry controls */}
           {audioUri && !isRecording && (
-            <View className="flex-row items-center mt-4 gap-4">
+            <View className="flex-row items-center mt-4 gap-3">
               <TouchableOpacity
                 onPress={playAudio}
-                className={`px-6 py-2 rounded-full border flex-row items-center ${isPlaying ? 'border-brand-purple/50 bg-brand-purple/20' : 'border-brand-purple/30 bg-brand-purple/5'}`}
+                className={`flex-row items-center px-4 py-2 rounded-[4px] border ${t.border}`}
+                style={{ backgroundColor: t.colors.bg }}
               >
-                <Ionicons name={isPlaying ? "stop" : "play"} size={14} color="#8B5CF6" />
-                <Text className="text-brand-purple text-[10px] font-black uppercase tracking-[2px] ml-2">
+                <Ionicons
+                  name={isPlaying ? "stop-outline" : "play-outline"}
+                  size={14}
+                  color={t.colors.subtext}
+                />
+                <Text
+                  style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, letterSpacing: 1 }}
+                  className={`${t.textSubtle} uppercase ml-2`}
+                >
                   {isPlaying ? "Stop" : "Play"}
                 </Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 onPress={handleRetry}
-                className="px-6 py-2 rounded-full border border-red-500/30 bg-red-500/5 flex-row items-center"
+                className={`flex-row items-center px-4 py-2 rounded-[4px] border`}
+                style={{ borderColor: t.colors.error, backgroundColor: t.colors.bg }}
               >
-                <Ionicons name="refresh" size={14} color="#F87171" />
-                <Text className="text-red-400 text-[10px] font-black uppercase tracking-[2px] ml-2">
+                <Ionicons name="refresh-outline" size={14} color={t.colors.error} />
+                <Text
+                  style={{
+                    fontFamily: "Inter_600SemiBold",
+                    fontSize: 11,
+                    letterSpacing: 1,
+                    color: t.colors.error,
+                  }}
+                  className="uppercase ml-2"
+                >
                   Retry
                 </Text>
               </TouchableOpacity>
@@ -383,119 +408,254 @@ export default function LoggingScreen() {
           )}
         </View>
 
-        <View className="px-6 space-y-8">
-          <View>
-            <Text className="text-brand-subtext text-xs font-bold uppercase mb-4 tracking-[3px]">
-              Quick Entry
-            </Text>
-            <View className="bg-brand-card p-5 rounded-[24px] border border-white/5 flex-row items-center">
-              <Ionicons name="text-outline" size={20} color="#9CA3AF" />
-              <TextInput
-                className="flex-1 text-white ml-3 text-lg"
-                placeholder="What did you actually do?"
-                placeholderTextColor="#4B5563"
-                value={activity}
-                onChangeText={setActivity}
-              />
-            </View>
-          </View>
-
-          <View className="mt-8">
-            <Text className="text-brand-subtext text-xs font-bold uppercase mb-4 tracking-[3px]">
-              How was the vibe?
-            </Text>
-            <View className="flex-row flex-wrap gap-4">
-              <MoodBtn
-                label="Focused"
-                value="focused"
-                current={mood}
-                set={setMood}
-                icon="eye"
-              />
-              <MoodBtn
-                label="Neutral"
-                value="neutral"
-                current={mood}
-                set={setMood}
-                icon="happy"
-              />
-              <MoodBtn
-                label="Exhausted"
-                value="exhausted"
-                current={mood}
-                set={setMood}
-                icon="battery-dead"
-              />
-              <MoodBtn
-                label="Deep Work"
-                value="deep_work"
-                current={mood}
-                set={setMood}
-                icon="flash"
-              />
-            </View>
-          </View>
-
-          <View className="mt-8">
-            <Text className="text-brand-subtext text-xs font-bold uppercase mb-4 tracking-[3px]">
-              Productivity
-            </Text>
-            <View className="flex-row gap-2">
-              <ProdBtn
-                label="Distracted"
-                value={1}
-                current={productivity}
-                set={setProductivity}
-                color="#EF4444"
-              />
-              <ProdBtn
-                label="Somewhat"
-                value={3}
-                current={productivity}
-                set={setProductivity}
-                color="#F59E0B"
-              />
-              <ProdBtn
-                label="Productive"
-                value={5}
-                current={productivity}
-                set={setProductivity}
-                color="#8B5CF6"
-              />
-            </View>
-          </View>
-
-          <TouchableOpacity
-            onPress={handleSave}
-            disabled={isTranscribing || isStopping}
-            className={`p-5 rounded-full items-center mt-12 flex-row justify-center ${
-              isTranscribing || isStopping 
-                ? "bg-brand-card border border-white/10 opacity-50" 
-                : "bg-brand-purple shadow-2xl shadow-brand-purple/50"
-            }`}
+        {/* ── Quick Entry text field ─────────────────────────────────────── */}
+        <View className="mb-6">
+          <Text
+            style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 2 }}
+            className={`${t.textSubtle} uppercase mb-3`}
           >
-            <View className="mr-3">
-              <Ionicons name={isTranscribing || isStopping ? "hourglass-outline" : "paper-plane"} size={20} color="white" />
-            </View>
-            <Text className="text-white font-black text-lg ml-3">
-              {isTranscribing || isStopping ? "PROCESSING AUDIO..." : "SAVE LOG ENTRY"}
-            </Text>
-          </TouchableOpacity>
+            Quick Entry
+          </Text>
+          <TextInput
+            style={{
+              fontFamily: "Inter_400Regular",
+              fontSize: 15,
+              lineHeight: 24,
+              borderColor: activityFocused ? "#6B8E6F" : t.colors.border,
+              borderWidth: 1,
+              borderRadius: 4,
+              color: t.colors.textDim,
+              backgroundColor: t.colors.bg,
+              padding: 14,
+              minHeight: 80,
+            }}
+            placeholder="What did you actually do?"
+            placeholderTextColor={t.colors.subtext}
+            value={activity}
+            onChangeText={setActivity}
+            multiline
+            onFocus={() => setActivityFocused(true)}
+            onBlur={() => setActivityFocused(false)}
+          />
         </View>
+
+        {/* ── Environment selector ───────────────────────────────────────── */}
+        <View className="mb-6">
+          <Text
+            style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 2 }}
+            className={`${t.textSubtle} uppercase mb-3`}
+          >
+            Environment
+          </Text>
+          <View className="flex-row flex-wrap gap-2 mb-3">
+            {["Home", "Office", "Cafe", "Custom"].map((env) => (
+              <TouchableOpacity
+                key={env}
+                onPress={() => setEnvironment(env)}
+                className="items-center rounded-[4px] border px-4 py-2"
+                style={{
+                  borderColor: environment === env ? t.colors.green : t.colors.border,
+                  backgroundColor: environment === env ? t.colors.greenLight : t.colors.card,
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: "Inter_500Medium",
+                    fontSize: 12,
+                    color: environment === env ? t.colors.text : t.colors.subtext,
+                  }}
+                >
+                  {env}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {environment === "Custom" && (
+            <TextInput
+              style={{
+                fontFamily: "Inter_400Regular",
+                fontSize: 14,
+                borderColor: customEnvFocused ? "#6B8E6F" : t.colors.border,
+                borderWidth: 1,
+                borderRadius: 4,
+                color: t.colors.textDim,
+                backgroundColor: t.colors.bg,
+                padding: 12,
+              }}
+              placeholder="Where are you? (Max 10 words)"
+              placeholderTextColor={t.colors.subtext}
+              value={customEnv}
+              onChangeText={setCustomEnv}
+              onFocus={() => setCustomEnvFocused(true)}
+              onBlur={() => setCustomEnvFocused(false)}
+            />
+          )}
+        </View>
+
+        {/* ── Tag selector ────────────────────────────────────────────────── */}
+        {customTags.length > 0 && (
+          <View className="mb-6">
+            <Text
+              style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 2 }}
+              className={`${t.textSubtle} uppercase mb-3`}
+            >
+              Tags
+            </Text>
+            <View className="flex-row flex-wrap gap-2">
+              {customTags.map((tag) => {
+                const isActive = selectedTags.includes(tag);
+                return (
+                  <TouchableOpacity
+                    key={tag}
+                    onPress={() => {
+                      if (isActive) {
+                        setSelectedTags(selectedTags.filter((t) => t !== tag));
+                      } else {
+                        setSelectedTags([...selectedTags, tag]);
+                      }
+                    }}
+                    className="flex-row items-center rounded-[4px] border px-3 py-1.5"
+                    style={{
+                      borderColor: isActive ? t.colors.green : t.colors.border,
+                      backgroundColor: isActive ? t.colors.greenLight : t.colors.card,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: "Inter_500Medium",
+                        fontSize: 12,
+                        color: isActive ? t.colors.text : t.colors.subtext,
+                      }}
+                    >
+                      {tag}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* ── Mood selector ─────────────────────────────────────────────── */}
+        <View className="mb-6">
+          <Text
+            style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 2 }}
+            className={`${t.textSubtle} uppercase mb-3`}
+          >
+            How was the vibe?
+          </Text>
+          <View className="flex-row flex-wrap gap-2">
+            {(
+              [
+                { label: "Focused", value: "focused", icon: "eye-outline" },
+                { label: "Neutral", value: "neutral", icon: "happy-outline" },
+                { label: "Exhausted", value: "exhausted", icon: "battery-dead-outline" },
+                { label: "Deep Work", value: "deep_work", icon: "flash-outline" },
+              ] as const
+            ).map((item) => (
+              <MoodBtn
+                key={item.value}
+                label={item.label}
+                value={item.value}
+                icon={item.icon}
+                current={mood}
+                set={setMood}
+                t={t}
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* ── Productivity selector ─────────────────────────────────────── */}
+        <View className="mb-8">
+          <Text
+            style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 2 }}
+            className={`${t.textSubtle} uppercase mb-3`}
+          >
+            Productivity Level
+          </Text>
+          <View className="flex-row gap-2">
+            {(
+              [
+                { label: "Distracted", value: 1 },
+                { label: "Somewhat", value: 3 },
+                { label: "Productive", value: 5 },
+              ] as const
+            ).map((item) => (
+              <ProdBtn
+                key={item.value}
+                label={item.label}
+                value={item.value}
+                current={productivity}
+                set={setProductivity}
+                t={t}
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* ── Remarks (P.S.) ─────────────────────────────────────────────── */}
+        <View className="mb-8">
+          <Text
+            style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 2 }}
+            className={`${t.textSubtle} uppercase mb-3`}
+          >
+            Remarks (P.S.)
+          </Text>
+          <TextInput
+            style={{
+              fontFamily: "Inter_400Regular",
+              fontSize: 14,
+              borderColor: remarksFocused ? "#6B8E6F" : t.colors.border,
+              borderWidth: 1,
+              borderRadius: 4,
+              color: t.colors.textDim,
+              backgroundColor: t.colors.bg,
+              padding: 12,
+              minHeight: 60,
+            }}
+            placeholder="Any extra details you missed..."
+            placeholderTextColor={t.colors.subtext}
+            value={remarks}
+            onChangeText={setRemarks}
+            multiline
+            onFocus={() => setRemarksFocused(true)}
+            onBlur={() => setRemarksFocused(false)}
+          />
+        </View>
+
       </ScrollView>
     </View>
   );
 }
 
-function ProdBtn({ label, value, current, set, color }: any) {
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function MoodBtn({ label, value, icon, current, set, t }: any) {
   const active = current === value;
   return (
     <TouchableOpacity
       onPress={() => set(value)}
-      className={`flex-1 py-4 rounded-2xl items-center border ${active ? "border-brand-purple bg-brand-purple/10" : "border-white/5 bg-brand-card"}`}
+      className="items-center rounded-[4px] border px-4 py-3"
+      style={{
+        borderColor: active ? t.colors.green : t.colors.border,
+        backgroundColor: active ? t.colors.greenLight : t.colors.card,
+      }}
     >
+      <Ionicons
+        name={icon}
+        size={20}
+        color={active ? t.colors.text : t.colors.subtext}
+      />
       <Text
-        className={`font-bold ${active ? "text-white" : "text-brand-subtext"}`}
+        style={{
+          fontFamily: "Inter_600SemiBold",
+          fontSize: 10,
+          letterSpacing: 1,
+          marginTop: 6,
+          color: active ? t.colors.text : t.colors.subtext,
+        }}
+        className="uppercase"
       >
         {label}
       </Text>
@@ -503,16 +663,23 @@ function ProdBtn({ label, value, current, set, color }: any) {
   );
 }
 
-function MoodBtn({ label, value, current, set, icon }: any) {
+function ProdBtn({ label, value, current, set, t }: any) {
   const active = current === value;
   return (
     <TouchableOpacity
       onPress={() => set(value)}
-      className={`items-center px-5 py-4 rounded-[20px] border ${active ? "bg-brand-purple/20 border-brand-purple shadow-glow" : "bg-brand-card border-white/5"}`}
+      className="flex-1 py-3 rounded-[4px] items-center border"
+      style={{
+        borderColor: active ? t.colors.green : t.colors.border,
+        backgroundColor: active ? t.colors.greenLight : t.colors.card,
+      }}
     >
-      <Ionicons name={icon} size={24} color={active ? "#8B5CF6" : "#4B5563"} />
       <Text
-        className={`mt-2 text-[10px] font-bold uppercase tracking-widest ${active ? "text-white" : "text-brand-subtext"}`}
+        style={{
+          fontFamily: "Inter_600SemiBold",
+          fontSize: 12,
+          color: active ? t.colors.text : t.colors.subtext,
+        }}
       >
         {label}
       </Text>

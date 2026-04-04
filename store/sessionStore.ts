@@ -68,8 +68,14 @@ export const useSessionStore = create<SessionState>()(
         }
       },
       endSession: async () => {
-        await cancelAllScheduledNotificationsAsync();
-        set({ isActive: false, startTime: null, endTime: null, goals: [] });
+        // Always reset state regardless of notification errors
+        try {
+          await cancelAllScheduledNotificationsAsync();
+        } catch (e) {
+          console.warn('Could not cancel notifications on session end:', e);
+        } finally {
+          set({ isActive: false, startTime: null, endTime: null, goals: [] });
+        }
       },
       toggleGoal: (id) =>
         set((state) => ({

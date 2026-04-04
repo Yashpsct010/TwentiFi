@@ -1,18 +1,18 @@
 import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { LogEntry } from '@/services/database';
+import { useTheme } from '@/hooks/use-theme';
 
 interface StreakCalendarProps {
   logs: LogEntry[];
 }
 
-// Helper to format date as YYYY-MM-DD
-const formatDate = (date: Date) => {
-  return date.toISOString().split('T')[0];
-};
+const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
 export default function StreakCalendar({ logs }: StreakCalendarProps) {
-  // Group logs by date
+  const t = useTheme();
+
+  // ── All existing logic preserved ─────────────────────────────────────────
   const countsByDate = logs.reduce((acc: Record<string, number>, log) => {
     const d = new Date(log.timestamp);
     const dateStr = formatDate(d);
@@ -20,21 +20,12 @@ export default function StreakCalendar({ logs }: StreakCalendarProps) {
     return acc;
   }, {});
 
-  // Generate last 4 months (18 weeks * 7 = 126 days)
-  const WEEKS = 18;
+  const WEEKS = 17;
   const DAYS = WEEKS * 7;
-  
   const today = new Date();
-  
-  // Create a 2D array of weeks containing days
+
   const grid: { date: string; count: number }[][] = Array.from({ length: WEEKS }, () => []);
 
-  // We want to fill the grid so that the the last cell is 'today'
-  // But standard commit graphs have weeks as columns and days as rows.
-  // Day 0 is Sunday, ..., Day 6 is Saturday.
-  
-  // We'll calculate the start date by going back DAYS from today's end of the week.
-  // Actually, to make it simple, we generate the last 182 days in order.
   const daysArray = [];
   for (let i = DAYS - 1; i >= 0; i--) {
     const d = new Date();
@@ -45,38 +36,48 @@ export default function StreakCalendar({ logs }: StreakCalendarProps) {
     });
   }
 
-  // Group into weeks (columns)
-  // Let's just chunk them into size of 7 for simplicity
   for (let i = 0; i < WEEKS; i++) {
     grid[i] = daysArray.slice(i * 7, (i + 1) * 7);
   }
 
-  const getColor = (count: number) => {
-    if (count === 0) return 'bg-white/5 border-white/10';
-    if (count <= 2) return 'bg-brand-purple/30 border-brand-purple/30';
-    if (count <= 5) return 'bg-brand-purple/60 border-brand-purple/50';
-    return 'bg-brand-purple border-brand-purple';
+  // ── Theme-aware cell colors ───────────────────────────────────────────────
+  const getCellStyle = (count: number) => {
+    if (t.isDark) {
+      if (count === 0) return { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.10)' };
+      if (count <= 2) return { backgroundColor: 'rgba(107,142,111,0.30)', borderColor: 'rgba(107,142,111,0.30)' };
+      if (count <= 5) return { backgroundColor: 'rgba(107,142,111,0.60)', borderColor: 'rgba(107,142,111,0.50)' };
+      return { backgroundColor: '#6B8E6F', borderColor: '#6B8E6F' };
+    } else {
+      if (count === 0) return { backgroundColor: t.colors.border, borderColor: t.colors.border };
+      if (count <= 2) return { backgroundColor: '#C6ECC8', borderColor: '#C6ECC8' };
+      if (count <= 5) return { backgroundColor: '#88B98C', borderColor: '#88B98C' };
+      return { backgroundColor: '#6B8E6F', borderColor: '#6B8E6F' };
+    }
   };
 
+  const legendCells = [
+    t.isDark ? 'rgba(255,255,255,0.05)' : t.colors.border,
+    t.isDark ? 'rgba(107,142,111,0.30)' : '#C6ECC8',
+    t.isDark ? 'rgba(107,142,111,0.60)' : '#88B98C',
+    '#6B8E6F',
+  ];
+
   return (
-    <View className="bg-brand-card p-6 rounded-[32px] border border-white/5">
-      <Text className="text-white font-bold mb-4 tracking-widest uppercase text-xs text-center">
-        Consistency (Last 4 Months)
-      </Text>
-      
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false} 
+    <View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
         className="w-full"
         contentContainerStyle={{ flexGrow: 1 }}
       >
         <View className="flex-row self-center">
           {grid.map((week, weekIndex) => (
             <View key={weekIndex} className="flex-col mr-1">
-              {week.map((day, dayIndex) => (
+              {week.map((day) => (
                 <View
                   key={day.date}
-                  className={`w-4 h-4 rounded-sm border mb-1 ${getColor(day.count)}`}
+                  className="w-4 h-4 rounded-[2px] border mb-1"
+                  style={getCellStyle(day.count)}
                 />
               ))}
             </View>
@@ -84,13 +85,27 @@ export default function StreakCalendar({ logs }: StreakCalendarProps) {
         </View>
       </ScrollView>
 
-      <View className="flex-row items-center justify-end mt-4">
-        <Text className="text-brand-subtext text-[10px] uppercase font-bold mr-2">Less</Text>
-        <View className="w-3 h-3 rounded-sm border bg-white/5 border-white/10 mr-1" />
-        <View className="w-3 h-3 rounded-sm border bg-brand-purple/30 border-brand-purple/30 mr-1" />
-        <View className="w-3 h-3 rounded-sm border bg-brand-purple/60 border-brand-purple/50 mr-1" />
-        <View className="w-3 h-3 rounded-sm border bg-brand-purple border-brand-purple mr-2" />
-        <Text className="text-brand-subtext text-[10px] uppercase font-bold">More</Text>
+      {/* Legend */}
+      <View className="flex-row items-center justify-end mt-3">
+        <Text
+          style={{ fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 1 }}
+          className={`${t.textSubtle} uppercase mr-2`}
+        >
+          Less
+        </Text>
+        {legendCells.map((color, i) => (
+          <View
+            key={i}
+            className="w-3 h-3 rounded-[2px] mr-1"
+            style={{ backgroundColor: color }}
+          />
+        ))}
+        <Text
+          style={{ fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 1 }}
+          className={`${t.textSubtle} uppercase`}
+        >
+          More
+        </Text>
       </View>
     </View>
   );

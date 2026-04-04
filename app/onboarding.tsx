@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
+// ── Slide data (unchanged) ────────────────────────────────────────────────────
 const SLIDES = [
   {
     id: '1',
@@ -44,16 +45,27 @@ const SLIDES = [
   },
 ];
 
+// ── Design tokens (light mode = Vellum Ledger, no theme toggle on onboarding) ─
+const C = {
+  bg: '#FAFAF8',
+  card: '#F5F1EB',
+  border: '#D9D5CE',
+  text: '#1A1A1A',
+  textDim: '#39382F',
+  subtext: '#66655A',
+  green: '#6B8E6F',
+  greenLight: '#C6ECC8',
+};
+
 export default function OnboardingScreen() {
+  // ── All existing logic preserved ──────────────────────────────────────────
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
+  const [keyFocused, setKeyFocused] = useState(false);
 
-  const {
-    geminiApiKey,
-    setGeminiApiKey,
-    setHasCompletedOnboarding,
-  } = useSettingsStore();
+  const { geminiApiKey, setGeminiApiKey, setHasCompletedOnboarding } =
+    useSettingsStore();
 
   const handleNext = () => {
     if (currentIndex < SLIDES.length - 1) {
@@ -72,48 +84,145 @@ export default function OnboardingScreen() {
     Linking.openURL('https://aistudio.google.com/app/apikey');
   };
 
-  const renderItem = ({ item, index }: { item: typeof SLIDES[0]; index: number }) => {
+  // ── Slide renderer ────────────────────────────────────────────────────────
+  const renderItem = ({ item, index }: { item: (typeof SLIDES)[0]; index: number }) => {
+    const isApiSlide = index === 3;
+
     const content = (
       <>
-        <View className={`w-32 h-32 rounded-full bg-brand-purple/20 items-center justify-center border border-brand-purple/50 ${index === 3 ? 'mb-4 mt-8' : 'mb-8'}`}>
-          <Ionicons name={item.icon} size={64} color="#8B5CF6" />
+        {/* Icon block */}
+        <View
+          style={{
+            width: 88,
+            height: 88,
+            borderRadius: 4,
+            backgroundColor: C.card,
+            borderWidth: 1,
+            borderColor: C.border,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: isApiSlide ? 16 : 32,
+            marginTop: isApiSlide ? 24 : 0,
+          }}
+        >
+          <Ionicons name={item.icon} size={40} color={C.green} />
         </View>
-        <Text className={`text-3xl font-black text-white text-center tracking-wide ${index === 3 ? 'mb-2' : 'mb-4'}`}>
+
+        {/* Title */}
+        <Text
+          style={{
+            fontFamily: 'Inter_700Bold',
+            fontSize: 26,
+            letterSpacing: -0.5,
+            color: C.text,
+            textAlign: 'center',
+            marginBottom: isApiSlide ? 8 : 16,
+          }}
+        >
           {item.title}
         </Text>
-        <Text className={`text-brand-subtext text-center text-lg leading-relaxed ${index === 3 ? 'mb-6' : 'mb-12'}`}>
+
+        {/* Description */}
+        <Text
+          style={{
+            fontFamily: 'Inter_400Regular',
+            fontSize: 15,
+            lineHeight: 24,
+            color: C.subtext,
+            textAlign: 'center',
+            marginBottom: isApiSlide ? 24 : 48,
+          }}
+        >
           {item.description}
         </Text>
 
-        {index === 3 && (
-          <View className="w-full">
-            <View className="flex-row items-center justify-center mb-6 py-2 px-4 rounded-full bg-brand-purple/20 self-center border border-brand-purple/30">
-              <Text className="text-brand-purple font-black text-[10px] uppercase tracking-widest mr-2">
-                Scroll Down for Setup
+        {/* API key slide extras */}
+        {isApiSlide && (
+          <View style={{ width: '100%' }}>
+            {/* Hint badge */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: C.card,
+                borderWidth: 1,
+                borderColor: C.border,
+                borderRadius: 4,
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                alignSelf: 'center',
+                marginBottom: 20,
+              }}
+            >
+              <Text
+                style={{
+                  fontFamily: 'Inter_600SemiBold',
+                  fontSize: 10,
+                  letterSpacing: 1.5,
+                  color: C.subtext,
+                  marginRight: 6,
+                }}
+              >
+                SCROLL DOWN FOR SETUP
               </Text>
-              <Ionicons name="chevron-down" size={14} color="#8B5CF6" />
+              <Ionicons name="chevron-down" size={12} color={C.subtext} />
             </View>
 
-            <Image 
-              source={require('@/assets/images/aistudio-guide.gif')} 
-              className="w-full h-[320px] mb-8"
+            {/* Guide GIF */}
+            <Image
+              source={require('@/assets/images/aistudio-guide.gif')}
+              style={{ width: '100%', height: 300, marginBottom: 24 }}
               resizeMode="contain"
             />
-            <View className="bg-brand-card p-4 rounded-2xl border border-white/5 flex-row items-center mb-4">
-              <Ionicons name="key-outline" size={20} color="#9CA3AF" />
+
+            {/* API Key input */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: C.bg,
+                borderWidth: 1,
+                borderColor: keyFocused ? C.green : C.border,
+                borderRadius: 4,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                marginBottom: 12,
+              }}
+            >
+              <Ionicons name="key-outline" size={16} color={C.subtext} />
               <TextInput
-                className="flex-1 text-white ml-3 text-base"
+                style={{
+                  flex: 1,
+                  fontFamily: 'Inter_400Regular',
+                  fontSize: 14,
+                  color: C.textDim,
+                  marginLeft: 10,
+                }}
                 placeholder="Paste Gemini API Key here"
-                placeholderTextColor="#4B5563"
+                placeholderTextColor={C.subtext}
                 value={geminiApiKey}
                 onChangeText={setGeminiApiKey}
                 secureTextEntry
                 autoCapitalize="none"
+                onFocus={() => setKeyFocused(true)}
+                onBlur={() => setKeyFocused(false)}
               />
             </View>
-            <TouchableOpacity onPress={openAiStudio} className="mb-8">
-              <Text className="text-brand-purple text-center font-bold underline">
-                Get a free API key from Google AI Studio
+
+            {/* Get key link */}
+            <TouchableOpacity onPress={openAiStudio} style={{ marginBottom: 32 }}>
+              <Text
+                style={{
+                  fontFamily: 'Inter_600SemiBold',
+                  fontSize: 12,
+                  letterSpacing: 1,
+                  color: C.green,
+                  textAlign: 'center',
+                  textDecorationLine: 'underline',
+                }}
+              >
+                Get a free key from Google AI Studio →
               </Text>
             </TouchableOpacity>
           </View>
@@ -121,13 +230,12 @@ export default function OnboardingScreen() {
       </>
     );
 
-    if (index === 3) {
+    if (isApiSlide) {
       return (
-        <ScrollView 
-          style={{ width }} 
-          className="flex-1 px-8" 
+        <ScrollView
+          style={{ width }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ alignItems: 'center', paddingTop: 20, paddingBottom: 40 }}
+          contentContainerStyle={{ alignItems: 'center', paddingTop: 20, paddingBottom: 40, paddingHorizontal: 32 }}
         >
           {content}
         </ScrollView>
@@ -135,14 +243,15 @@ export default function OnboardingScreen() {
     }
 
     return (
-      <View style={{ width }} className="flex-1 items-center justify-center px-8">
+      <View style={{ width, flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
         {content}
       </View>
     );
   };
 
+  // ── Main render ───────────────────────────────────────────────────────────
   return (
-    <SafeAreaView className="flex-1 bg-brand-bg">
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <FlatList
         ref={flatListRef}
         data={SLIDES}
@@ -158,39 +267,67 @@ export default function OnboardingScreen() {
         }}
       />
 
-      <View className="px-8 pb-12 pt-4">
-        <View className="flex-row justify-center mb-8 gap-2">
+      {/* Bottom bar */}
+      <View style={{ paddingHorizontal: 32, paddingBottom: 40, paddingTop: 16 }}>
+        {/* Progress dots */}
+        <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 24, gap: 8 }}>
           {SLIDES.map((_, index) => (
             <View
               key={index}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                currentIndex === index ? 'w-8 bg-brand-purple' : 'w-2 bg-white/20'
-              }`}
+              style={{
+                height: 2,
+                borderRadius: 1,
+                backgroundColor: currentIndex === index ? C.text : C.border,
+                width: currentIndex === index ? 24 : 8,
+              }}
             />
           ))}
         </View>
 
-        <View className="flex-row items-center justify-between">
-          <TouchableOpacity
-            onPress={finishOnboarding}
-            className="px-6 py-4"
-          >
-            <Text className="text-brand-subtext font-bold uppercase tracking-widest text-sm">
+        {/* Controls */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Skip */}
+          <TouchableOpacity onPress={finishOnboarding} style={{ paddingVertical: 14, paddingHorizontal: 4 }}>
+            <Text
+              style={{
+                fontFamily: 'Inter_500Medium',
+                fontSize: 13,
+                letterSpacing: 1,
+                color: C.subtext,
+              }}
+            >
               Skip
             </Text>
           </TouchableOpacity>
 
+          {/* Next / Let's Go */}
           <TouchableOpacity
             onPress={handleNext}
-            className="bg-brand-purple px-10 py-4 rounded-full shadow-lg shadow-brand-purple/50 flex-row items-center"
+            style={{
+              backgroundColor: C.text,
+              borderRadius: 4,
+              paddingHorizontal: 28,
+              paddingVertical: 14,
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
           >
-            <Text className="text-white font-black uppercase tracking-widest mr-2">
+            <Text
+              style={{
+                fontFamily: 'Inter_700Bold',
+                fontSize: 13,
+                letterSpacing: 1.5,
+                color: C.bg,
+                marginRight: 8,
+                textTransform: 'uppercase',
+              }}
+            >
               {currentIndex === SLIDES.length - 1 ? "Let's Go" : 'Next'}
             </Text>
             <Ionicons
               name={currentIndex === SLIDES.length - 1 ? 'rocket' : 'arrow-forward'}
-              size={18}
-              color="white"
+              size={16}
+              color={C.bg}
             />
           </TouchableOpacity>
         </View>

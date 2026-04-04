@@ -3,7 +3,7 @@ import { saveLog, getAllLogs, deleteAllLogs, LogEntry } from '@/services/databas
 
 interface LogState {
   logs: LogEntry[];
-  addLog: (activity: string, mood: LogEntry['mood'], productivity: number, audioUri?: string | null) => Promise<void>;
+  addLog: (activity: string, mood: LogEntry['mood'], productivity: number, audioUri?: string | null, environment?: string, tags?: string[], remarks?: string) => Promise<void>;
   clearLogs: () => Promise<void>;
   loadLogs: () => Promise<void>;
 }
@@ -18,7 +18,7 @@ export const useLogStore = create<LogState>((set) => ({
       console.error('Failed to load logs:', error);
     }
   },
-  addLog: async (activity, mood, productivity, audioUri) => {
+  addLog: async (activity, mood, productivity, audioUri, environment, tags, remarks) => {
     const newLog: LogEntry = {
       id: Math.random().toString(36).substr(2, 9),
       timestamp: new Date().toISOString(),
@@ -26,6 +26,9 @@ export const useLogStore = create<LogState>((set) => ({
       mood,
       productivity,
       audioUri: audioUri || null,
+      environment,
+      tags: tags ? JSON.stringify(tags) : undefined,
+      remarks,
     };
 
     try {

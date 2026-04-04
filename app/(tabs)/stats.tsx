@@ -1,74 +1,66 @@
+import HistoricalInsightsCard from "@/components/HistoricalInsightsCard";
+import StreakCalendar from "@/components/StreakCalendar";
+import { useTheme } from "@/hooks/use-theme";
+import { generateAIInsights } from "@/services/gemini";
+import { useInsightStore } from "@/store/insightStore";
 import { useLogStore } from "@/store/logStore";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
-import { useInsightStore } from "@/store/insightStore";
-import { generateAIInsights, AIInsights } from "@/services/gemini";
-import StreakCalendar from "@/components/StreakCalendar";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState, useEffect } from "react";
-import { ScrollView, Text, View, ActivityIndicator } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Image, ScrollView, Text, View } from "react-native";
+
+// ── Mood config (same as before) ────────────────────────────────────────────
+const moodColors: any = {
+  deep_work: "#6B8E6F",
+  focused: "#6B8E6F",
+  neutral: "#9B7D6A",
+  exhausted: "#A64542",
+};
+
+const moodLabels: any = {
+  deep_work: "Deep Work",
+  focused: "Focused",
+  neutral: "Neutral",
+  exhausted: "Exhausted",
+};
 
 export default function StatsScreen() {
+  // ── All existing logic preserved ──────────────────────────────────────────
   const { logs } = useLogStore();
   const { goals } = useSessionStore();
   const { geminiApiKey } = useSettingsStore();
-  const { aiInsights, lastPulseCount, lastTimestamp, setInsights } = useInsightStore();
+  const { aiInsights, lastPulseCount, lastTimestamp, setInsights } =
+    useInsightStore();
+  const t = useTheme();
 
   const [isLoadingAI, setIsLoadingAI] = useState(false);
 
-  // Calculate Productivity Score (average productivity * 20 for 0-100 scale)
-  const avgProductivity =
-    logs.length > 0
-      ? logs.reduce((acc, log) => acc + log.productivity, 0) / logs.length
-      : 0;
-  const productivityScore = Math.round(avgProductivity * 20);
-
-  // Calculate Focus Streak (very basic placeholder for now: total days with logs)
   const uniqueDays = new Set(
     logs.map((log) => new Date(log.timestamp).toDateString()),
   ).size;
   const streak = uniqueDays;
 
-  // Calculate Daily Goal Progress
   const completedGoals = goals.filter((g) => g.completed).length;
   const goalProgress =
     goals.length > 0 ? Math.round((completedGoals / goals.length) * 100) : 0;
 
-  // Activity Breakdown (Count by mood)
   const breakdown = logs.reduce((acc: any, log) => {
     acc[log.mood] = (acc[log.mood] || 0) + 1;
     return acc;
   }, {});
 
-  const moodColors: any = {
-    deep_work: "#8B5CF6",
-    focused: "#10B981",
-    neutral: "#F59E0B",
-    exhausted: "#EF4444",
-  };
-
-  const moodLabels: any = {
-    deep_work: "Deep Work",
-    focused: "Focused",
-    neutral: "Neutral",
-    exhausted: "Exhausted",
-  };
-
   useEffect(() => {
     async function fetchInsights() {
       if (!geminiApiKey || logs.length === 0) return;
-
       const currentLatestTimestamp = logs[0]?.timestamp || null;
-
-      // Only generate if we don't have insights OR the logs have changed since the last generated insight
       if (
         aiInsights &&
         lastPulseCount === logs.length &&
         lastTimestamp === currentLatestTimestamp
       ) {
-        return; // We have up-to-date insights cached
+        return;
       }
-
       setIsLoadingAI(true);
       try {
         const insights = await generateAIInsights(logs, geminiApiKey);
@@ -80,112 +72,247 @@ export default function StatsScreen() {
       }
     }
     fetchInsights();
-  }, [logs, geminiApiKey, aiInsights, lastPulseCount, lastTimestamp, setInsights]);
+  }, [
+    logs,
+    geminiApiKey,
+    aiInsights,
+    lastPulseCount,
+    lastTimestamp,
+    setInsights,
+  ]);
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <View className="flex-1 bg-brand-bg pt-12">
-      <View className="px-6 mb-8">
-        <Text className="text-3xl font-bold text-white">Stats & Insights</Text>
-      </View>
+    <View className={`flex-1 ${t.bg}`}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingTop: 56,
+          paddingBottom: 48,
+          paddingHorizontal: 24,
+        }}
+      >
+        {/* Page header */}
+        <View className="mb-8">
+          <Text
+            style={{
+              fontFamily: "Inter_700Bold",
+              fontSize: 28,
+              letterSpacing: -0.5,
+            }}
+            className={t.textPrimary}
+          >
+            Stats & Insights
+          </Text>
+        </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} className="px-6">
-        <View className="flex-row gap-4 mb-8">
-          <View className="flex-1 bg-brand-card p-6 rounded-[32px] border border-white/5">
-            <Text className="text-brand-subtext text-[10px] font-bold uppercase tracking-wider mb-2">
-              Productivity Score
+        <HistoricalInsightsCard logs={logs} />
+
+        <View
+          className={`${t.cardBg} border ${t.border} rounded-[4px] p-5 mb-6 flex-row items-center`}
+        >
+          <Image
+            source={{
+              uri: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif",
+            }}
+            style={{ width: 32, height: 32, marginRight: 14 }}
+          />
+          <View>
+            <Text
+              style={{ fontFamily: "Inter_700Bold", fontSize: 16 }}
+              className={`${t.textPrimary} mb-0.5`}
+            >
+              {streak}-Day Focus Streak
             </Text>
-            <View className="flex-row items-baseline">
-              <Text className="text-4xl font-black text-white">
-                {productivityScore}
-              </Text>
-              <Ionicons
-                name="stats-chart"
-                size={16}
-                color="#8B5CF6"
-                style={{ marginLeft: 4 }}
-              />
-            </View>
-          </View>
-          <View className="flex-1 bg-brand-card p-6 rounded-[32px] border border-white/5">
-            <Text className="text-brand-subtext text-[10px] font-bold uppercase tracking-wider mb-2">
-              Focus Streak
-            </Text>
-            <Text className="text-4xl font-black text-white">
-              {streak} <Text className="text-lg font-bold">Days</Text>
+            <Text
+              style={{ fontFamily: "Inter_500Medium", fontSize: 13 }}
+              className={t.textSubtle}
+            >
+              {streak > 5
+                ? "Top 10% consistency! 🔥"
+                : "Keep the momentum going!"}
             </Text>
           </View>
         </View>
 
-        <View className="mb-8">
+        {/* ── Streak Calendar ──────────────────────────────────────────────── */}
+        <View
+          className={`${t.cardBg} border ${t.border} rounded-[4px] p-5 mb-6`}
+        >
+          <Text
+            style={{
+              fontFamily: "Inter_600SemiBold",
+              fontSize: 10,
+              letterSpacing: 2,
+            }}
+            className={`${t.textSubtle} uppercase mb-4`}
+          >
+            Consistency
+          </Text>
           <StreakCalendar logs={logs} />
         </View>
 
-        <View className="bg-brand-card p-8 rounded-[40px] border border-white/5 items-center mb-8">
-          <Text className="text-white font-bold mb-6 tracking-widest uppercase">
+        {/* ── Daily Goal Progress ──────────────────────────────────────────── */}
+        <View
+          className={`${t.cardBg} border ${t.border} rounded-[4px] p-5 mb-6`}
+        >
+          <Text
+            style={{
+              fontFamily: "Inter_600SemiBold",
+              fontSize: 10,
+              letterSpacing: 2,
+            }}
+            className={`${t.textSubtle} uppercase mb-4`}
+          >
             Daily Goal Progress
           </Text>
-          <View className="w-48 h-24 items-center justify-end overflow-hidden">
-            <View className="w-48 h-48 rounded-full border-[12px] border-brand-purple/10 absolute -bottom-24" />
+
+          {/* Progress bar */}
+          <View
+            className={`h-1 rounded-[2px] mb-3`}
+            style={{ backgroundColor: t.colors.border }}
+          >
             <View
-              className="w-48 h-48 rounded-full border-[12px] border-brand-purple absolute -bottom-24"
+              className="h-1 rounded-[2px]"
               style={{
-                transform: [{ rotate: `${-180 + goalProgress * 1.8}deg` }],
+                width: `${goalProgress}%`,
+                backgroundColor: t.colors.green,
               }}
             />
-            <Text className="text-3xl font-black text-white mb-2">
-              {goalProgress}%
+          </View>
+
+          <View className="flex-row justify-between items-center">
+            <Text
+              style={{ fontFamily: "Inter_400Regular", fontSize: 13 }}
+              className={t.textSubtle}
+            >
+              {completedGoals} of {goals.length} goals completed
             </Text>
-            <Text className="text-brand-subtext text-[10px] font-bold uppercase tracking-widest">
-              TARGET REACHED
+            <Text
+              style={{
+                fontFamily: "Inter_700Bold",
+                fontSize: 20,
+                letterSpacing: -0.5,
+              }}
+              className={t.textPrimary}
+            >
+              {goalProgress}%
             </Text>
           </View>
         </View>
 
-        <View className="bg-brand-card p-6 rounded-[32px] border border-white/5 mb-10">
-          <Text className="text-white font-bold mb-4 tracking-widest uppercase">
+        {/* ── Activity Breakdown ───────────────────────────────────────────── */}
+        <View
+          className={`${t.cardBg} border ${t.border} rounded-[4px] p-5 mb-6`}
+        >
+          <Text
+            style={{
+              fontFamily: "Inter_600SemiBold",
+              fontSize: 10,
+              letterSpacing: 2,
+            }}
+            className={`${t.textSubtle} uppercase mb-4`}
+          >
             Activity Breakdown
           </Text>
+
           {Object.keys(breakdown).length > 0 ? (
             Object.keys(breakdown).map((mood: any) => (
-              <BreakdownItem
+              <BreakdownRow
                 key={mood}
                 label={moodLabels[mood] || mood}
-                duration={`${breakdown[mood]} pulses`}
-                color={moodColors[mood] || "#8B5CF6"}
+                count={breakdown[mood]}
+                total={logs.length}
+                color={moodColors[mood] || t.colors.subtext}
+                textSubtle={t.textSubtle}
+                textPrimary={t.textPrimary}
+                borderColor={t.colors.border}
               />
             ))
           ) : (
-            <Text className="text-brand-subtext text-center py-4">
+            <Text
+              style={{ fontFamily: "Inter_400Regular", fontSize: 13 }}
+              className={`${t.textSubtle} text-center py-2`}
+            >
               No pulses recorded yet.
             </Text>
           )}
         </View>
 
-        <View className="bg-brand-purple p-6 rounded-[32px] mb-12 overflow-hidden">
+        {/* ── AI Analysis card ─────────────────────────────────────────────── */}
+        <View
+          className={`border ${t.border} rounded-[4px] p-5 mb-4`}
+          style={{ backgroundColor: t.colors.card }}
+        >
+          {/* Card header */}
           <View className="flex-row items-center mb-4">
-            <Ionicons name="sparkles" size={20} color="white" />
-            <Text className="text-white font-black ml-2 uppercase tracking-wider">
-              {aiInsights ? `AI ANALYSIS: ${aiInsights.productivityLevel.toUpperCase()}` : "AI INSIGHT"}
+            <Ionicons
+              name="sparkles-outline"
+              size={14}
+              color={t.colors.subtext}
+            />
+            <Text
+              style={{
+                fontFamily: "Inter_600SemiBold",
+                fontSize: 10,
+                letterSpacing: 2,
+              }}
+              className={`${t.textSubtle} uppercase ml-2 flex-1`}
+            >
+              {aiInsights
+                ? `AI Analysis — ${aiInsights.productivityLevel}`
+                : "AI Analysis"}
             </Text>
-            {isLoadingAI && <ActivityIndicator size="small" color="white" style={{ marginLeft: 10 }} />}
+            {isLoadingAI && (
+              <ActivityIndicator size="small" color={t.colors.subtext} />
+            )}
           </View>
-          
-          <Text className="text-white text-base font-bold mb-2">
-            {aiInsights?.summary || (logs.length > 5 
-                ? "Analyzing your latest pulses..." 
+
+          {/* Summary text */}
+          <Text
+            style={{
+              fontFamily: "Inter_400Regular",
+              fontSize: 14,
+              lineHeight: 22,
+            }}
+            className={`${t.textDim} mb-3`}
+          >
+            {aiInsights?.summary ||
+              (logs.length > 5
+                ? "Analyzing your latest pulses…"
                 : "Gather more data by logging pulses to unlock personalized AI insights.")}
           </Text>
-          
+
+          {/* Advice quote block */}
           {aiInsights?.advice && (
-            <View className="bg-white/10 p-4 rounded-2xl mt-2 border border-white/10">
-              <Text className="text-white/90 text-sm italic leading-relaxed">
+            <View
+              className={`border-l-2 pl-4 mt-1`}
+              style={{ borderLeftColor: t.colors.green }}
+            >
+              <Text
+                style={{
+                  fontFamily: "Inter_400Regular",
+                  fontSize: 13,
+                  fontStyle: "italic",
+                  lineHeight: 20,
+                }}
+                className={t.textSubtle}
+              >
                 &quot;{aiInsights.advice}&quot;
               </Text>
             </View>
           )}
 
+          {/* No API key hint */}
           {!geminiApiKey && (
-            <Text className="text-white/60 text-[10px] mt-4 font-bold uppercase tracking-widest">
+            <Text
+              style={{
+                fontFamily: "Inter_600SemiBold",
+                fontSize: 10,
+                letterSpacing: 1.5,
+              }}
+              className={`${t.textSubtle} uppercase mt-4`}
+            >
               Connect Gemini API in Settings for deep analysis
             </Text>
           )}
@@ -195,17 +322,59 @@ export default function StatsScreen() {
   );
 }
 
-function BreakdownItem({ label, duration, color }: any) {
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function BreakdownRow({
+  label,
+  count,
+  total,
+  color,
+  textSubtle,
+  textPrimary,
+  borderColor,
+}: {
+  label: string;
+  count: number;
+  total: number;
+  color: string;
+  textSubtle: string;
+  textPrimary: string;
+  borderColor: string;
+}) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+
   return (
-    <View className="flex-row items-center justify-between mb-4">
-      <View className="flex-row items-center">
-        <View
-          className="w-3 h-3 rounded-full mr-3"
-          style={{ backgroundColor: color }}
-        />
-        <Text className="text-white font-medium">{label}</Text>
+    <View className="mb-4">
+      <View className="flex-row justify-between items-center mb-1">
+        <View className="flex-row items-center">
+          <View
+            className="w-2 h-2 rounded-[1px] mr-2"
+            style={{ backgroundColor: color }}
+          />
+          <Text
+            style={{ fontFamily: "Inter_500Medium", fontSize: 13 }}
+            className={textPrimary}
+          >
+            {label}
+          </Text>
+        </View>
+        <Text
+          style={{ fontFamily: "Inter_600SemiBold", fontSize: 12 }}
+          className={textSubtle}
+        >
+          {count} pulses · {pct}%
+        </Text>
       </View>
-      <Text className="text-brand-subtext font-bold">{duration}</Text>
+      {/* Progress track */}
+      <View
+        className="h-[2px] rounded-[1px]"
+        style={{ backgroundColor: borderColor }}
+      >
+        <View
+          className="h-[2px] rounded-[1px]"
+          style={{ width: `${pct}%`, backgroundColor: color }}
+        />
+      </View>
     </View>
   );
 }

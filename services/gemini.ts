@@ -188,7 +188,7 @@ export const transcribeWithGemini = async (
       contents: [
         {
           parts: [
-            { text: "Accurately transcribe the speech in the following audio. Reply only with the final transcript text, with no extra framing, markdown formatting, or preamble." },
+            { text: "Accurately transcribe the speech in the following audio. If the audio is completely silent, contains only static, or has no discernible human speech, reply EXACTLY with 'NO_SPEECH'. Otherwise, reply only with the final transcript text, with no extra framing, markdown formatting, or preamble." },
             { inlineData: { mimeType: mimeType, data: base64Audio } }
           ]
         }
@@ -210,6 +210,9 @@ export const transcribeWithGemini = async (
     const transcript = data?.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!transcript) throw new Error("Received empty transcript from Gemini.");
+    if (transcript.trim() === "NO_SPEECH" || transcript.trim() === "'NO_SPEECH'") {
+      return ""; // Handled gracefully by the UI fallback
+    }
 
     return transcript.trim();
   } catch (err: any) {
@@ -282,6 +285,45 @@ export const expandTaskWithGemini = async (
   } catch (err) {
     console.error("Failed to expand task with AI:", err);
     throw new Error("Failed to expand task. Check your API key or try again.");
+  }
+};
+
+/**
+ * Generates a random daily productivity quote and a matching image keyword.
+ */
+export const generateDailyQuote = async (apiKey: string): Promise<{quote: string; author: string; keyword: string}> => {
+  if (!apiKey) {
+    throw new Error("API key missing.");
+  }
+
+  const prompt = `
+    Generate a rare, highly insightful quote about focus, productivity, or discipline. 
+    It should NOT be a common cliché. 
+    Also, provide a 1-2 word aesthetic visual keyword that represents the mood of the quote (e.g., "minimalist", "fog", "brutalist", "serene nature", "dark desk").
+    Return ONLY a JSON object with this exact structure:
+    {"quote": "...", "author": "...", "keyword": "..."}
+  `;
+
+  try {
+    const responseText = await callGemini(prompt, apiKey);
+    const parsed = extractJSON(responseText);
+    
+    if (parsed.quote && parsed.author && parsed.keyword) {
+      return { 
+        quote: parsed.quote, 
+        author: parsed.author, 
+        keyword: parsed.keyword 
+      };
+    }
+    throw new Error("Invalid quote JSON format.");
+  } catch (err) {
+    console.error("Failed to generate quote:", err);
+    // Fallback if network/API fails
+    return {
+      quote: "Focus is a matter of deciding what things you're not going to do.",
+      author: "John Carmack",
+      keyword: "minimalist"
+    };
   }
 };
 

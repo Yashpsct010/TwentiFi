@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "TwentiFi",
-    "slug": "reactnative",
+    "slug": "twentifi",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition.",
+        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,7 +31,9 @@
         "MODIFY_AUDIO_SETTINGS",
         "INTERNET",
         "VIBRATE",
-        "WAKE_LOCK"
+        "WAKE_LOCK",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
     "web": {
@@ -53,7 +59,8 @@
       "expo-av",
       "expo-speech-recognition",
       "@react-native-firebase/app",
-      "expo-audio"
+      "expo-audio",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -62,8 +69,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "9b36c486-4241-405b-8d18-caca2e8c92d1"
+        "projectId": "369ead2f-d3bc-4e58-be1c-8a5acf8035d9"
       }
-    }
+    },
+    "owner": "yash010"
   }
 }

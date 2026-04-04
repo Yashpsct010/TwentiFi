@@ -1,6 +1,8 @@
 import { expandTaskWithGemini } from "@/services/gemini";
+import WisdomPulse from "@/components/WisdomPulse";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
+import { useTheme } from "@/hooks/use-theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
@@ -17,18 +19,33 @@ import { TouchableOpacity as GHTouchableOpacity } from "react-native-gesture-han
 import DraggableFlatList from "react-native-draggable-flatlist";
 
 export default function HomeScreen() {
-  const { isActive, startTime, goals, startSession, endSession, toggleGoal, addGoal, deleteGoal, replaceGoalWithMultiple, reorderGoals } = useSessionStore();
+  const {
+    isActive,
+    startTime,
+    goals,
+    startSession,
+    endSession,
+    toggleGoal,
+    addGoal,
+    deleteGoal,
+    replaceGoalWithMultiple,
+    reorderGoals,
+  } = useSessionStore();
   const { userName, startOfDay, endOfDay, geminiApiKey } = useSettingsStore();
+  const t = useTheme();
+
   const [newGoal, setNewGoal] = useState("");
   const [activeNewGoal, setActiveNewGoal] = useState("");
   const [tempGoals, setTempGoals] = useState<string[]>([]);
   const [elapsed, setElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isExpanding, setIsExpanding] = useState<string | null>(null);
+  const [goalInputFocused, setGoalInputFocused] = useState(false);
+  const [activeGoalInputFocused, setActiveGoalInputFocused] = useState(false);
   const router = useRouter();
+  const lapStartOffset = useRef(0);
 
-  // Track the offset to subtract from the total session time (to handle pauses and lap resets)
-  const lapStartOffset = useRef(0); 
+
 
   React.useEffect(() => {
     let interval: any;
@@ -38,13 +55,14 @@ export default function HomeScreen() {
       lapStartOffset.current = 0;
       return;
     }
-
     if (isActive && startTime && !isPaused) {
       const startTimeNum =
         typeof startTime === "string" ? parseInt(startTime, 10) : startTime;
       if (!isNaN(startTimeNum)) {
         interval = setInterval(() => {
-          const totalSessionSeconds = Math.floor((Date.now() - startTimeNum) / 1000);
+          const totalSessionSeconds = Math.floor(
+            (Date.now() - startTimeNum) / 1000
+          );
           setElapsed(Math.max(0, totalSessionSeconds - lapStartOffset.current));
         }, 1000);
       }
@@ -54,53 +72,47 @@ export default function HomeScreen() {
 
   const handlePause = () => {
     if (isPaused) {
-      // Resuming: Adjust lapStartOffset so the timer continues from the current 'elapsed' value
       if (startTime) {
-        const startTimeNum = typeof startTime === "string" ? parseInt(startTime, 10) : startTime;
-        const totalSessionSeconds = Math.floor((Date.now() - startTimeNum) / 1000);
+        const startTimeNum =
+          typeof startTime === "string" ? parseInt(startTime, 10) : startTime;
+        const totalSessionSeconds = Math.floor(
+          (Date.now() - startTimeNum) / 1000
+        );
         lapStartOffset.current = totalSessionSeconds - elapsed;
       }
       setIsPaused(false);
     } else {
-      // Pausing: Just stop the interval (UI will stay at current 'elapsed')
       setIsPaused(true);
     }
   };
 
   const handleLapReset = () => {
     if (!startTime) return;
-    const startTimeNum = typeof startTime === "string" ? parseInt(startTime, 10) : startTime;
+    const startTimeNum =
+      typeof startTime === "string" ? parseInt(startTime, 10) : startTime;
     lapStartOffset.current = Math.floor((Date.now() - startTimeNum) / 1000);
     setElapsed(0);
   };
 
-
   const formatTime = (seconds: number) => {
     const min = Math.floor(seconds / 60);
     const sec = seconds % 60;
-    return `${min.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
+    return `${min.toString().padStart(2, "0")}:${sec
+      .toString()
+      .padStart(2, "0")}`;
   };
 
   const handleStart = () => {
     try {
-      // Basic validation: Check if current time is within boundaries (optional warning)
       const now = new Date();
-      const [startH, startM] = startOfDay.split(':').map(Number);
-      const [endH, endM] = endOfDay.split(':').map(Number);
-      
+      const [startH, startM] = startOfDay.split(":").map(Number);
+      const [endH, endM] = endOfDay.split(":").map(Number);
       const startTimeToday = new Date(now);
       startTimeToday.setHours(startH, startM, 0);
-      
       const endTimeToday = new Date(now);
       endTimeToday.setHours(endH, endM, 0);
-
       const isOutside = now < startTimeToday || now > endTimeToday;
-      
-      if (isOutside) {
-        console.warn("Starting session outside of configured day boundaries.");
-      }
-
-      console.log("Starting session...");
+      if (isOutside) console.warn("Starting session outside of configured day boundaries.");
       startSession(tempGoals);
       setTempGoals([]);
     } catch (err) {
@@ -108,12 +120,13 @@ export default function HomeScreen() {
     }
   };
 
-  const handleEnd = () => {
+  const handleEnd = async () => {
     try {
-      console.log("Ending session...");
-      endSession();
+      await endSession();
     } catch (err) {
-      console.error("Failed to end session:", err);
+      console.error('Failed to end session:', err);
+      // Force-reset as fallback so the UI never gets stuck
+      useSessionStore.setState({ isActive: false, startTime: null, endTime: null, goals: [] });
     }
   };
 
@@ -132,263 +145,396 @@ export default function HomeScreen() {
   };
 
   const handleTaskOptions = (goalId: string, goalText: string) => {
-    Alert.alert(
-      "Task Options",
-      `Manage "${goalText}"`,
-      [
-        {
-          text: "Expand with AI ✨",
-          onPress: async () => {
-            if (!geminiApiKey) {
-              Alert.alert("API Key Required", "Add your Gemini API key in Settings to use AI expansion.");
-              return;
-            }
-            setIsExpanding(goalId);
-            try {
-              const newTasks = await expandTaskWithGemini(goalText, geminiApiKey);
-              replaceGoalWithMultiple(goalId, newTasks);
-            } catch (err: any) {
-              Alert.alert("Expansion Failed", err.message || "Failed to expand task.");
-            } finally {
-              setIsExpanding(null);
-            }
+    Alert.alert("Task Options", `Manage "${goalText}"`, [
+      {
+        text: "Expand with AI ✨",
+        onPress: async () => {
+          if (!geminiApiKey) {
+            Alert.alert(
+              "API Key Required",
+              "Add your Gemini API key in Settings to use AI expansion."
+            );
+            return;
+          }
+          setIsExpanding(goalId);
+          try {
+            const newTasks = await expandTaskWithGemini(goalText, geminiApiKey);
+            replaceGoalWithMultiple(goalId, newTasks);
+          } catch (err: any) {
+            Alert.alert("Expansion Failed", err.message || "Failed to expand task.");
+          } finally {
+            setIsExpanding(null);
           }
         },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => deleteGoal(goalId),
-        },
-        { text: "Cancel", style: "cancel" }
-      ]
-    );
+      },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => deleteGoal(goalId),
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
-  return (
-    <View className="flex-1 bg-brand-bg pt-12 px-6">
-      <View className="flex-row justify-between items-center mb-10">
-        <View className="flex-row items-center">
-          <View className="w-12 h-12 rounded-full bg-brand-purple items-center justify-center mr-3">
-            <Ionicons name="person" size={24} color="white" />
-          </View>
-          <View>
-            <Text className="text-brand-subtext text-xs">Welcome back,</Text>
-            <Text className="text-xl font-bold text-white">{userName}</Text>
-          </View>
-        </View>
-        <TouchableOpacity
-          onPress={() => router.push("/(tabs)/settings" as any)}
+  // ─── Pre-session view ──────────────────────────────────────────────────────
+  if (!isActive) {
+    return (
+      <View className={`flex-1 ${t.bg}`}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingTop: 56, paddingBottom: 40, paddingHorizontal: 24 }}
         >
-          <Ionicons name="settings-sharp" size={24} color="#9CA3AF" />
-        </TouchableOpacity>
-      </View>
+          {/* Header */}
+          <View className="flex-row justify-between items-center mb-10">
+            <View>
+              <Text
+                style={{ fontFamily: "Inter_400Regular", fontSize: 11, letterSpacing: 2 }}
+                className={`${t.textSubtle} uppercase`}
+              >
+                Welcome back
+              </Text>
+              <Text
+                style={{ fontFamily: "Inter_700Bold", fontSize: 24 }}
+                className={t.textPrimary}
+              >
+                {userName}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/settings" as any)}
+              className={`w-12 h-12 rounded-[4px] border items-center justify-center ${t.iconBtn} ${t.border}`}
+            >
+              <Ionicons name="settings-outline" size={20} color={t.colors.subtext} />
+            </TouchableOpacity>
+          </View>
 
-      {!isActive ? (
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <View className="bg-brand-card p-6 rounded-[32px] mb-8 border border-white/5">
-            <Text className="text-2xl font-bold text-white mb-2">
+          {/* Hero card */}
+          <View className={`${t.cardBg} border ${t.border} rounded-[4px] p-6 mb-8`}>
+            <Text
+              style={{ fontFamily: "Inter_700Bold", fontSize: 28, letterSpacing: -0.5 }}
+              className={`${t.textPrimary} mb-1`}
+            >
               Ready to Focus?
             </Text>
-            <Text className="text-brand-subtext mb-6">
-              Initialize your session to start logging.
+            <Text
+              style={{ fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 22 }}
+              className={`${t.textSubtle} mb-6`}
+            >
+              Start your 25-minute deep work interval to maximize productivity today.
             </Text>
 
-            <View className="mb-8 flex-row items-center bg-brand-bg/40 p-4 rounded-2xl border border-white/5">
-              <Ionicons name="calendar-outline" size={20} color="#8B5CF6" />
+            {/* Work day info */}
+            <View className={`flex-row items-center ${t.inputBg} border ${t.border} rounded-[4px] p-4 mb-6`}>
+              <Ionicons name="time-outline" size={16} color={t.colors.subtext} />
               <View className="ml-3">
-                <Text className="text-white/40 text-[10px] uppercase font-bold tracking-widest">Defined Work Day</Text>
-                <Text className="text-white font-bold">{startOfDay} — {endOfDay}</Text>
+                <Text
+                  style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 1.5 }}
+                  className={`${t.textSubtle} uppercase`}
+                >
+                  Defined Work Day
+                </Text>
+                <Text
+                  style={{ fontFamily: "Inter_600SemiBold", fontSize: 14 }}
+                  className={t.textPrimary}
+                >
+                  {startOfDay} — {endOfDay}
+                </Text>
               </View>
             </View>
 
+            {/* Daily Goals */}
             <View className="mb-6">
               <View className="flex-row justify-between items-center mb-4">
-                <Text className="text-white font-bold">DAILY GOALS</Text>
-                <View className="bg-brand-purple/20 px-3 py-1 rounded-full border border-brand-purple/30">
-                  <Text className="text-brand-purple text-[10px] font-bold">
+                <Text
+                  style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 2 }}
+                  className={`${t.textSubtle} uppercase`}
+                >
+                  Daily Goals
+                </Text>
+                <View className={`border ${t.border} rounded-[4px] px-2 py-1`}>
+                  <Text
+                    style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 1 }}
+                    className={t.textSubtle}
+                  >
                     {tempGoals.length} TASKS
                   </Text>
                 </View>
               </View>
 
-              <View className="flex-row mb-4">
+              {/* Goal input */}
+              <View className="flex-row mb-3">
                 <TextInput
-                  className="flex-1 bg-brand-bg text-white p-4 rounded-2xl mr-2 border border-white/10"
-                  placeholder="What's a win today?"
-                  placeholderTextColor="#4B5563"
+                  style={{
+                    fontFamily: "Inter_400Regular",
+                    fontSize: 14,
+                    borderColor: goalInputFocused ? "#6B8E6F" : t.colors.border,
+                    borderWidth: 1,
+                  }}
+                  className={`flex-1 ${t.inputBg} rounded-[4px] px-4 py-3 mr-2`}
+                  placeholder="Add a goal for today…"
+                  placeholderTextColor={t.colors.subtext}
                   value={newGoal}
                   onChangeText={setNewGoal}
                   onSubmitEditing={addTempGoal}
+                  onFocus={() => setGoalInputFocused(true)}
+                  onBlur={() => setGoalInputFocused(false)}
                 />
                 <TouchableOpacity
                   onPress={addTempGoal}
-                  className="bg-brand-purple w-14 h-14 rounded-2xl justify-center items-center shadow-lg shadow-brand-purple/50"
+                  className={`w-12 h-12 rounded-[4px] items-center justify-center ${t.cardHighBg} border ${t.border}`}
                 >
-                  <Ionicons name="add" size={28} color="white" />
+                  <Ionicons name="add" size={22} color={t.colors.text} />
                 </TouchableOpacity>
               </View>
 
+              {/* Goal list */}
               {tempGoals.map((goal, index) => (
                 <View
                   key={index}
-                  className="bg-brand-bg/50 p-4 rounded-2xl mb-2 flex-row justify-between items-center border border-white/5"
+                  className={`${t.inputBg} border ${t.border} rounded-[4px] p-4 mb-2 flex-row justify-between items-center`}
                 >
-                  <Text className="text-slate-200">{goal}</Text>
+                  <Text
+                    style={{ fontFamily: "Inter_400Regular", fontSize: 14 }}
+                    className={`${t.textDim} flex-1 mr-2`}
+                  >
+                    {goal}
+                  </Text>
                   <TouchableOpacity
                     onPress={() =>
                       setTempGoals(tempGoals.filter((_, i) => i !== index))
                     }
                   >
-                    <Ionicons name="close-circle" size={22} color="#4B5563" />
+                    <Ionicons name="close" size={18} color={t.colors.subtext} />
                   </TouchableOpacity>
                 </View>
               ))}
             </View>
 
+            {/* Initialize Session button */}
             <TouchableOpacity
-              onPress={() => {
-                console.log("Initialize session pressed");
-                handleStart();
-              }}
-              className="bg-brand-purple p-5 rounded-full items-center shadow-xl shadow-brand-purple/40"
+              onPress={handleStart}
+              className="rounded-[4px] p-4 items-center"
+              style={{ backgroundColor: t.colors.text }}
             >
-              <Text className="text-white font-black text-lg">
-                INITIALIZE SESSION
+              <Text
+                style={{ fontFamily: "Inter_700Bold", fontSize: 13, letterSpacing: 1.5, color: t.isDark ? '#0D0B1F' : '#FAFAF8' }}
+                className="uppercase"
+              >
+                Initialize Session
               </Text>
             </TouchableOpacity>
           </View>
+          
+          <WisdomPulse />
         </ScrollView>
-      ) : (
-        <View className="flex-1">
-          <View className="items-center mb-10">
-            <View className="w-64 h-64 rounded-full border-8 border-brand-card items-center justify-center">
-              <View className="absolute w-64 h-64 rounded-full border-8 border-brand-purple/30" />
-              <View className="items-center">
-                <Text className="text-brand-subtext text-xs font-bold uppercase tracking-widest mb-1">
-                  {isPaused ? "Paused" : "Focus Session"}
-                </Text>
-                <Text className="text-6xl font-black text-white">
-                  {formatTime(elapsed)}
-                </Text>
-              </View>
-            </View>
+      </View>
+    );
+  }
 
-            <View className="flex-row mt-8">
-              <TouchableOpacity
-                className="bg-brand-card w-14 h-14 rounded-full items-center justify-center mr-4 border border-white/10"
-                onPress={handleLapReset}
-              >
-                <Ionicons name="refresh" size={24} color="white" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handlePause}
-                className={`w-20 h-20 rounded-full items-center justify-center shadow-2xl ${isPaused ? 'bg-amber-500 shadow-amber-500/60' : 'bg-brand-purple shadow-brand-purple/60'}`}
-              >
-                <Ionicons name={isPaused ? "play" : "pause"} size={36} color="white" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleEnd}
-                className="bg-brand-card w-14 h-14 rounded-full items-center justify-center ml-4 border border-white/10"
-              >
-                <Ionicons name="stop" size={24} color="white" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            onPress={() => {
-              console.log("Navigating to logging");
-              router.push("/logging" as any);
-            }}
-            className="bg-brand-purple flex-row p-5 rounded-[24px] items-center justify-center mb-10 shadow-lg shadow-brand-purple/30"
+  // ─── Active session view ───────────────────────────────────────────────────
+  return (
+    <View className={`flex-1 ${t.bg} pt-14 px-6`}>
+      {/* Header */}
+      <View className="flex-row justify-between items-center mb-8">
+        <Text
+          style={{ fontFamily: "Inter_700Bold", fontSize: 20 }}
+          className={t.textPrimary}
+        >
+          TwentiFi
+        </Text>
+        <View className={`border ${t.border} rounded-[4px] px-3 py-1`}>
+          <Text
+            style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 1.5 }}
+            className={t.textSubtle}
           >
-            <Ionicons name="create" size={24} color="white" />
-            <Text className="text-white font-black text-lg ml-3">
-              LOG WHAT YOU DID
-            </Text>
+            {isPaused ? "PAUSED" : "FOCUS SESSION"}
+          </Text>
+        </View>
+      </View>
+
+      {/* Timer */}
+      <View className={`${t.cardBg} border ${t.border} rounded-[4px] p-8 mb-6 items-center`}>
+        <Text
+          style={{ fontFamily: "Inter_400Regular", fontSize: 11, letterSpacing: 2 }}
+          className={`${t.textSubtle} uppercase mb-2`}
+        >
+          Elapsed Time
+        </Text>
+        <Text
+          style={{ fontFamily: "Inter_700Bold", fontSize: 56, letterSpacing: -2, lineHeight: 64 }}
+          className={t.textPrimary}
+        >
+          {formatTime(elapsed)}
+        </Text>
+
+        {/* Controls */}
+        <View className="flex-row items-center mt-6 gap-4">
+          <TouchableOpacity
+            onPress={handleLapReset}
+            className={`w-12 h-12 rounded-[4px] border items-center justify-center ${t.iconBtn} ${t.border}`}
+          >
+            <Ionicons name="refresh" size={20} color={t.colors.subtext} />
           </TouchableOpacity>
 
-          <View className="flex-1">
-            <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-xl font-bold text-white">
-                Today&apos;s top goals
-              </Text>
-              <View className="bg-brand-purple/20 px-3 py-1 rounded-full border border-brand-purple/30">
-                <Text className="text-brand-purple text-[10px] font-bold">
-                  {goals.length} TASKS
-                </Text>
-              </View>
-            </View>
-            <DraggableFlatList
-              showsVerticalScrollIndicator={false}
-              data={goals}
-              onDragEnd={({ data }) => reorderGoals(data)}
-              keyExtractor={(item) => item.id}
-              containerStyle={{ flex: 1 }}
-              renderItem={({ item: goal, drag, isActive: isDragging }) => (
-                <View className={`flex-row items-center p-5 rounded-[24px] mb-4 border border-white/5 justify-between ${isDragging ? "bg-brand-purple/20 shadow-lg scale-[1.02]" : "bg-brand-card"}`}>
-                  
-                  <GHTouchableOpacity
-                    activeOpacity={0.8}
-                    disabled={isDragging}
-                    onPress={() => toggleGoal(goal.id)}
-                    containerStyle={{ flex: 1 }}
-                    style={{ flexDirection: 'row', alignItems: 'center' }}
-                  >
-                    <Ionicons
-                      name={
-                        goal.completed ? "checkmark-circle" : "ellipse-outline"
-                      }
-                      size={28}
-                      color={goal.completed ? "#8B5CF6" : "#4B5563"}
-                    />
-                    <Text
-                      className={`ml-4 text-lg font-medium flex-1 ${goal.completed ? "text-brand-subtext line-through" : "text-white"}`}
-                    >
-                      {goal.text}
-                    </Text>
-                  </GHTouchableOpacity>
+          <TouchableOpacity
+            onPress={handlePause}
+            className="w-14 h-14 rounded-[4px] items-center justify-center"
+            style={{ backgroundColor: isPaused ? t.colors.brown : t.colors.text }}
+          >
+            <Ionicons
+              name={isPaused ? "play" : "pause"}
+              size={24}
+              color={t.isDark ? '#0D0B1F' : '#FAFAF8'}
+            />
+          </TouchableOpacity>
 
-                  {isExpanding === goal.id ? (
-                    <ActivityIndicator size="small" color="#8B5CF6" />
-                  ) : (
-                    <View className="flex-row items-center ml-2">
-                      <GHTouchableOpacity onPressIn={drag} className="p-2 mr-2">
-                        <Ionicons name="menu" size={20} color="#4B5563" />
-                      </GHTouchableOpacity>
-                      <GHTouchableOpacity onPress={() => handleTaskOptions(goal.id, goal.text)} className="p-2">
-                        <Ionicons
-                          name="ellipsis-vertical"
-                          size={20}
-                          color="#4B5563"
-                        />
-                      </GHTouchableOpacity>
-                    </View>
+          <TouchableOpacity
+            onPress={handleEnd}
+            className={`w-12 h-12 rounded-[4px] border items-center justify-center ${t.iconBtn} ${t.border}`}
+          >
+            <Ionicons name="stop" size={20} color={t.colors.subtext} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Log button */}
+      <TouchableOpacity
+        onPress={() => router.push("/logging" as any)}
+        className={`border ${t.border} rounded-[4px] p-4 flex-row items-center justify-center mb-6`}
+        style={{ backgroundColor: t.colors.card }}
+      >
+        <Ionicons name="create-outline" size={18} color={t.colors.text} />
+        <Text
+          style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, letterSpacing: 1 }}
+          className={`${t.textPrimary} ml-2 uppercase`}
+        >
+          Log What You Did
+        </Text>
+      </TouchableOpacity>
+
+      {/* Goals list */}
+      <View className="flex-1">
+        <View className="flex-row justify-between items-center mb-4">
+          <Text
+            style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 2 }}
+            className={`${t.textSubtle} uppercase`}
+          >
+            Today&apos;s Goals
+          </Text>
+          <Text
+            style={{ fontFamily: "Inter_600SemiBold", fontSize: 10 }}
+            className={t.textSubtle}
+          >
+            {goals.filter((g) => g.completed).length}/{goals.length}
+          </Text>
+        </View>
+
+        <DraggableFlatList
+          showsVerticalScrollIndicator={false}
+          data={goals}
+          onDragEnd={({ data }) => reorderGoals(data)}
+          keyExtractor={(item) => item.id}
+          containerStyle={{ flex: 1 }}
+          renderItem={({ item: goal, drag, isActive: isDragging }) => (
+            <View
+              className={`flex-row items-center rounded-[4px] mb-3 border justify-between ${
+                isDragging
+                  ? "opacity-80"
+                  : ""
+              }`}
+              style={{
+                backgroundColor: isDragging ? t.colors.card : t.colors.bg,
+                borderColor: isDragging ? t.colors.green : t.colors.border,
+                padding: 14,
+              }}
+            >
+              <GHTouchableOpacity
+                activeOpacity={0.7}
+                disabled={isDragging}
+                onPress={() => toggleGoal(goal.id)}
+                containerStyle={{ flex: 1 }}
+                style={{ flexDirection: "row", alignItems: "center" }}
+              >
+                <View
+                  className="w-5 h-5 rounded-[2px] border items-center justify-center mr-3"
+                  style={{
+                    borderColor: goal.completed ? t.colors.green : t.colors.border,
+                    backgroundColor: goal.completed ? t.colors.green : "transparent",
+                  }}
+                >
+                  {goal.completed && (
+                    <Ionicons name="checkmark" size={13} color="white" />
                   )}
                 </View>
-              )}
-              ListFooterComponent={
-                <View className="flex-row mt-2 mb-8 items-center bg-brand-card p-2 rounded-2xl border border-white/5">
-                  <TextInput
-                    className="flex-1 text-white p-3 rounded-xl bg-brand-bg/50"
-                    placeholder="Need to do something else?"
-                    placeholderTextColor="#4B5563"
-                    value={activeNewGoal}
-                    onChangeText={setActiveNewGoal}
-                    onSubmitEditing={handleActiveAddGoal}
-                  />
-                  <TouchableOpacity
-                    onPress={handleActiveAddGoal}
-                    className="bg-brand-purple w-12 h-12 rounded-xl justify-center items-center ml-2 shadow-lg shadow-brand-purple/50"
+                <Text
+                  style={{
+                    fontFamily: goal.completed
+                      ? "Inter_400Regular"
+                      : "Inter_500Medium",
+                    fontSize: 14,
+                    textDecorationLine: goal.completed ? "line-through" : "none",
+                  }}
+                  className={`flex-1 ${goal.completed ? t.textSubtle : t.textDim}`}
+                >
+                  {goal.text}
+                </Text>
+              </GHTouchableOpacity>
+
+              {isExpanding === goal.id ? (
+                <ActivityIndicator size="small" color={t.colors.green} />
+              ) : (
+                <View className="flex-row items-center ml-2">
+                  <GHTouchableOpacity onPressIn={drag} className="p-2 mr-1">
+                    <Ionicons name="menu" size={16} color={t.colors.border} />
+                  </GHTouchableOpacity>
+                  <GHTouchableOpacity
+                    onPress={() => handleTaskOptions(goal.id, goal.text)}
+                    className="p-2"
                   >
-                    <Ionicons name="add" size={24} color="white" />
-                  </TouchableOpacity>
+                    <Ionicons
+                      name="ellipsis-vertical"
+                      size={16}
+                      color={t.colors.subtext}
+                    />
+                  </GHTouchableOpacity>
                 </View>
-              }
-            />
-          </View>
-        </View>
-      )}
+              )}
+            </View>
+          )}
+          ListFooterComponent={
+            <View className={`flex-row mt-1 mb-8 border ${t.border} rounded-[4px] overflow-hidden`}
+              style={{ backgroundColor: t.colors.bg }}>
+              <TextInput
+                style={{
+                  fontFamily: "Inter_400Regular",
+                  fontSize: 14,
+                  flex: 1,
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
+                  borderColor: activeGoalInputFocused ? "#6B8E6F" : "transparent",
+                  borderWidth: 1,
+                  borderRadius: 4,
+                  color: t.colors.textDim,
+                }}
+                placeholder="Add another goal…"
+                placeholderTextColor={t.colors.subtext}
+                value={activeNewGoal}
+                onChangeText={setActiveNewGoal}
+                onSubmitEditing={handleActiveAddGoal}
+                onFocus={() => setActiveGoalInputFocused(true)}
+                onBlur={() => setActiveGoalInputFocused(false)}
+              />
+              <TouchableOpacity
+                onPress={handleActiveAddGoal}
+                className="w-12 items-center justify-center"
+                style={{ backgroundColor: t.colors.card }}
+              >
+                <Ionicons name="add" size={20} color={t.colors.text} />
+              </TouchableOpacity>
+            </View>
+          }
+        />
+      </View>
     </View>
   );
 }
