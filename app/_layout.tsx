@@ -8,6 +8,7 @@ import * as Notifications from 'expo-notifications';
 import React from 'react';
 import { initDB } from '@/services/database';
 import { useLogStore } from '@/store/logStore';
+import { useSessionStore } from '@/store/sessionStore';
 import { View } from 'react-native';
 import {
   useFonts,
@@ -18,6 +19,7 @@ import {
 } from '@expo-google-fonts/inter';
 
 import { useSettingsStore } from '@/store/settingsStore';
+import CustomDialog from '@/components/CustomDialog';
 
 // Configure how notifications are handled when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -50,6 +52,13 @@ export default function RootLayout() {
       try {
         await initDB();
         await useLogStore.getState().loadLogs();
+        
+        // Re-hydrate any active session notifications if the app restarted
+        const sessionState = useSessionStore.getState();
+        if (sessionState.isActive) {
+          console.log('[TwentiFi] Active session found on boot. Rescheduling notifications.');
+          await sessionState.rescheduleNextPulse().catch(e => console.error(e));
+        }
       } catch (error) {
         console.error('Failed to initialize app data:', error);
       }
@@ -98,6 +107,7 @@ export default function RootLayout() {
           <Stack.Screen name="logging" options={{ presentation: 'modal', headerShown: false }} />
         </Stack>
         <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+        <CustomDialog />
       </ThemeProvider>
     </GestureHandlerRootView>
   );

@@ -60,18 +60,24 @@ export const initDB = async () => {
 
 export const saveLog = async (log: LogEntry) => {
   const db = await getDB();
-  await db.runAsync(
-    "INSERT INTO logs (id, timestamp, activity, mood, productivity, audioUri, environment, tags, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    log.id,
-    log.timestamp,
-    log.activity,
-    log.mood,
-    log.productivity,
-    log.audioUri,
-    log.environment || null,
-    log.tags || null,
-    log.remarks || null
+  const statement = await db.prepareAsync(
+    "INSERT INTO logs (id, timestamp, activity, mood, productivity, audioUri, environment, tags, remarks) VALUES ($id, $timestamp, $activity, $mood, $productivity, $audio, $env, $tags, $remarks)"
   );
+  try {
+    await statement.executeAsync({
+      $id: log.id,
+      $timestamp: log.timestamp,
+      $activity: log.activity,
+      $mood: log.mood,
+      $productivity: log.productivity,
+      $audio: log.audioUri ?? "",
+      $env: log.environment ?? "",
+      $tags: log.tags ?? "",
+      $remarks: log.remarks ?? ""
+    });
+  } finally {
+    await statement.finalizeAsync();
+  }
 };
 
 export const getAllLogs = async (): Promise<LogEntry[]> => {
@@ -85,4 +91,36 @@ export const getAllLogs = async (): Promise<LogEntry[]> => {
 export const deleteAllLogs = async () => {
   const db = await getDB();
   await db.runAsync("DELETE FROM logs");
+};
+
+export const mergeLogsFromBackup = async (backupDbName: string) => {
+  const db = await getDB();
+  const backupDb = await SQLite.openDatabaseAsync(backupDbName);
+  
+  try {
+    const backupLogs = await backupDb.getAllAsync<LogEntry>("SELECT * FROM logs");
+    const statement = await db.prepareAsync(
+      "INSERT OR IGNORE INTO logs (id, timestamp, activity, mood, productivity, audioUri, environment, tags, remarks) VALUES ($id, $timestamp, $activity, $mood, $productivity, $audio, $env, $tags, $remarks)"
+    );
+    try {
+      for (const log of backupLogs) {
+        await statement.executeAsync({
+          $id: log.id,
+          $timestamp: log.timestamp,
+          $activity: log.activity,
+          $mood: log.mood,
+          $productivity: log.productivity,
+          $audio: log.audioUri ?? "",
+          $env: log.environment ?? "",
+          $tags: log.tags ?? "",
+          $remarks: log.remarks ?? ""
+        });
+      }
+    } finally {
+      await statement.finalizeAsync();
+    }
+  } catch (err) {
+    console.error("Failed to merge backup DB", err);
+    throw err;
+  }
 };

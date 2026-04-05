@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { saveLog, getAllLogs, deleteAllLogs, LogEntry } from '@/services/database';
+import * as FileSystem from 'expo-file-system';
 
 interface LogState {
   logs: LogEntry[];
@@ -44,6 +45,12 @@ export const useLogStore = create<LogState>((set) => ({
   clearLogs: async () => {
     try {
       await deleteAllLogs();
+      try {
+        const dir = `${FileSystem.documentDirectory}twentifi-audio/`;
+        await FileSystem.deleteAsync(dir, { idempotent: true });
+      } catch (e) {
+        console.warn('Failed to clean audio directory during purge:', e);
+      }
       set({ logs: [] });
     } catch (error) {
       console.error('Failed to clear logs:', error);

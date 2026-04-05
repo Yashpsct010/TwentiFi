@@ -3,11 +3,14 @@ import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { useTheme } from "@/hooks/use-theme";
 import { Ionicons } from "@expo/vector-icons";
-import * as FileSystem from "expo-file-system/legacy";
+import * as FileSystem from "expo-file-system";
+import * as DocumentPicker from "expo-document-picker";
+import { zip, unzip } from "react-native-zip-archive";
+import { mergeLogsFromBackup } from "@/services/database";
+import { useDialogStore } from "@/store/dialogStore";
 import * as Sharing from "expo-sharing";
 import React from "react";
 import {
-  Alert,
   Linking,
   Platform,
   ScrollView,
@@ -57,30 +60,86 @@ export default function SettingsScreen() {
 
   const exportLogs = async () => {
     if (logs.length === 0) {
-      Alert.alert("No Logs", "Capture some pulses before exporting!");
+      useDialogStore.getState().showDialog("No Logs", "No data to backup!");
       return;
     }
     try {
-      const header = "Timestamp,Activity,Mood,Productivity\n";
-      const rows = logs
-        .map(
-          (log) =>
-            `"${log.timestamp}","${log.activity.replace(/"/g, '""')}","${log.mood}",${log.productivity}`
-        )
-        .join("\n");
-      const csvContent = header + rows;
-      const fileUri = `${FileSystem.documentDirectory}the25_logs_${
-        new Date().toISOString().split("T")[0]
-      }.csv`;
-      await FileSystem.writeAsStringAsync(fileUri, csvContent, { encoding: "utf8" });
+      const backupDir = `${FileSystem.documentDirectory}TwentiFi_Backup_Temp/`;
+      const dbPath = `${FileSystem.documentDirectory}SQLite/the25.db`;
+      const audioDir = `${FileSystem.documentDirectory}twentifi-audio/`;
+
+      await FileSystem.makeDirectoryAsync(backupDir, { intermediates: true });
+      
+      const dbInfo = await FileSystem.getInfoAsync(dbPath);
+      if (dbInfo.exists) await FileSystem.copyAsync({ from: dbPath, to: `${backupDir}the25.db` });
+      
+      const audioInfo = await FileSystem.getInfoAsync(audioDir);
+      if (audioInfo.exists) await FileSystem.copyAsync({ from: audioDir, to: `${backupDir}twentifi-audio` });
+      
+      const zipPath = `${FileSystem.documentDirectory}TwentiFi_Backup_${new Date().toISOString().split("T")[0]}.zip`;
+      await zip(backupDir, zipPath);
+      
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri);
+        await Sharing.shareAsync(zipPath);
       } else {
-        Alert.alert("Sharing Unavailable", "Could not open sharing options.");
+        useDialogStore.getState().showDialog("Sharing Unavailable", "Could not open sharing options.");
       }
+      
+      await FileSystem.deleteAsync(backupDir, { idempotent: true });
     } catch (error) {
-      console.error("Export failed:", error);
-      Alert.alert("Export Failed", "An error occurred while generating the CSV.");
+      console.error("Export backup failed:", error);
+      useDialogStore.getState().showDialog("Backup Failed", "An error occurred while generating the bundle.");
+    }
+  };
+
+  const importLogs = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/zip', 'application/x-zip-compressed', 'application/octet-stream'],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled || result.assets.length === 0) return;
+
+      const zipUri = result.assets[0].uri;
+      const targetDir = `${FileSystem.documentDirectory}TwentiFi_Restore_Temp/`;
+      await FileSystem.makeDirectoryAsync(targetDir, { intermediates: true });
+
+      await unzip(zipUri, targetDir);
+
+      const extractedAudioDir = `${targetDir}twentifi-audio/`;
+      const extractedAudioInfo = await FileSystem.getInfoAsync(extractedAudioDir);
+      if (extractedAudioInfo.exists) {
+        const liveAudioDir = `${FileSystem.documentDirectory}twentifi-audio/`;
+        await FileSystem.makeDirectoryAsync(liveAudioDir, { intermediates: true });
+        
+        const files = await FileSystem.readDirectoryAsync(extractedAudioDir);
+        for (const file of files) {
+           await FileSystem.copyAsync({
+             from: `${extractedAudioDir}${file}`,
+             to: `${liveAudioDir}${file}`
+           });
+        }
+      }
+
+      const extractedDbPath = `${targetDir}the25.db`;
+      const extractedDbInfo = await FileSystem.getInfoAsync(extractedDbPath);
+      
+      if (extractedDbInfo.exists) {
+        const mergeDbTarget = `${FileSystem.documentDirectory}SQLite/the25_backup.db`;
+        await FileSystem.copyAsync({ from: extractedDbPath, to: mergeDbTarget });
+        
+        await mergeLogsFromBackup("the25_backup.db");
+        await FileSystem.deleteAsync(mergeDbTarget, { idempotent: true });
+      }
+
+      await FileSystem.deleteAsync(targetDir, { idempotent: true });
+      await useLogStore.getState().loadLogs();
+      useDialogStore.getState().showDialog("Restore Complete", "Data imported and merged successfully!");
+
+    } catch (error) {
+      console.error("Import backup failed:", error);
+      useDialogStore.getState().showDialog("Import Failed", String(error));
     }
   };
 
@@ -93,7 +152,7 @@ export default function SettingsScreen() {
         window.alert("All logs and active sessions have been cleared.");
       }
     } else {
-      Alert.alert(
+      useDialogStore.getState().showDialog(
         "Purge All Data",
         "Are you sure you want to clear all data? This cannot be undone.",
         [
@@ -104,7 +163,7 @@ export default function SettingsScreen() {
             onPress: async () => {
               await clearLogs();
               await endSession();
-              Alert.alert("Data Purged", "All logs and active sessions have been cleared.");
+              useDialogStore.getState().showDialog("Data Purged", "All logs and active sessions have been cleared.");
             },
           },
         ]
@@ -451,12 +510,28 @@ export default function SettingsScreen() {
           className={`flex-row items-center p-4 rounded-[4px] border ${t.border} mb-3`}
           style={{ backgroundColor: t.colors.card }}
         >
-          <Ionicons name="cloud-upload-outline" size={18} color={t.colors.subtext} />
+          <Ionicons name="archive-outline" size={18} color={t.colors.subtext} />
           <Text
             style={{ fontFamily: "Inter_500Medium", fontSize: 14 }}
             className={`${t.textPrimary} ml-3`}
           >
-            Export Logs (CSV)
+            Create Backup (.zip)
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={t.colors.border} style={{ marginLeft: "auto" }} />
+        </TouchableOpacity>
+
+        {/* Import */}
+        <TouchableOpacity
+          onPress={importLogs}
+          className={`flex-row items-center p-4 rounded-[4px] border ${t.border} mb-3`}
+          style={{ backgroundColor: t.colors.card }}
+        >
+          <Ionicons name="download-outline" size={18} color={t.colors.subtext} />
+          <Text
+            style={{ fontFamily: "Inter_500Medium", fontSize: 14 }}
+            className={`${t.textPrimary} ml-3`}
+          >
+            Import & Merge Backup
           </Text>
           <Ionicons name="chevron-forward" size={16} color={t.colors.border} style={{ marginLeft: "auto" }} />
         </TouchableOpacity>

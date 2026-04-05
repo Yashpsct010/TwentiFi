@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useLogStore } from "@/store/logStore";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { format } from "date-fns";
 import { Audio } from "expo-av";
@@ -34,6 +34,18 @@ export default function TimelineScreen() {
   React.useEffect(() => {
     return sound ? () => { sound.unloadAsync(); } : undefined;
   }, [sound]);
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        if (sound) {
+          sound.stopAsync().catch(() => {});
+          sound.unloadAsync().catch(() => {});
+          setSound(null);
+        }
+      };
+    }, [sound])
+  );
 
   const [activeTab, setActiveTab] = React.useState<"timeline" | "digest">("timeline");
 

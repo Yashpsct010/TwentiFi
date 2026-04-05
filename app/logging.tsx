@@ -20,8 +20,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Alert,
 } from "react-native";
+import * as FileSystem from "expo-file-system";
+import { useDialogStore } from "@/store/dialogStore";
 
 // ── Safe access to native modules (unchanged) ────────────────────────────────
 let ExpoSpeechRecognitionModule: any = null;
@@ -245,14 +246,28 @@ export default function LoggingScreen() {
         computedUri = await stopRecording();
       }
       
-      if (activity.trim() || computedUri) {
+      let stableUri = computedUri;
+      if (computedUri) {
+        try {
+          const ext = computedUri.split('.').pop() || 'm4a';
+          const dir = `${FileSystem.documentDirectory}twentifi-audio/`;
+          await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+          const newUri = `${dir}log-${Date.now()}.${ext}`;
+          await FileSystem.copyAsync({ from: computedUri, to: newUri });
+          stableUri = newUri;
+        } catch (e) {
+          console.error("Failed to make audio persistent:", e);
+        }
+      }
+      
+      if (activity.trim() || stableUri) {
         const finalEnv = environment === "Custom" ? customEnv.trim() : environment;
-        const finalActivity = activity.trim() || (computedUri ? "No transcript" : "");
+        const finalActivity = activity.trim() || (stableUri ? "No transcript" : "");
         await addLog(
           finalActivity, 
           mood, 
           productivity, 
-          computedUri,
+          stableUri,
           finalEnv || undefined,
           selectedTags.length > 0 ? selectedTags : undefined,
           remarks.trim() || undefined
@@ -266,7 +281,7 @@ export default function LoggingScreen() {
         console.warn("Activity and audio are empty, not saving");
       }
     } catch (err: any) {
-      Alert.alert("Save Error", "Failed to save log to database: " + (err.message || String(err)));
+      useDialogStore.getState().showDialog("Save Error", "Failed to save log to database: " + (err.message || String(err)));
     } finally {
       setIsSaving(false);
     }

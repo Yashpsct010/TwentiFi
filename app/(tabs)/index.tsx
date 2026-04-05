@@ -12,9 +12,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Alert,
   ActivityIndicator,
 } from "react-native";
+import { useDialogStore } from "@/store/dialogStore";
 import { TouchableOpacity as GHTouchableOpacity } from "react-native-gesture-handler";
 import DraggableFlatList from "react-native-draggable-flatlist";
 
@@ -145,12 +145,13 @@ export default function HomeScreen() {
   };
 
   const handleTaskOptions = (goalId: string, goalText: string) => {
-    Alert.alert("Task Options", `Manage "${goalText}"`, [
+    useDialogStore.getState().showDialog("Task Options", `Manage "${goalText}"`, [
       {
         text: "Expand with AI ✨",
+        style: "default",
         onPress: async () => {
           if (!geminiApiKey) {
-            Alert.alert(
+            useDialogStore.getState().showDialog(
               "API Key Required",
               "Add your Gemini API key in Settings to use AI expansion."
             );
@@ -161,7 +162,7 @@ export default function HomeScreen() {
             const newTasks = await expandTaskWithGemini(goalText, geminiApiKey);
             replaceGoalWithMultiple(goalId, newTasks);
           } catch (err: any) {
-            Alert.alert("Expansion Failed", err.message || "Failed to expand task.");
+            useDialogStore.getState().showDialog("Expansion Failed", err.message || "Failed to expand task.");
           } finally {
             setIsExpanding(null);
           }
