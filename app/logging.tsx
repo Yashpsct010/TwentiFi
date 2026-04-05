@@ -21,7 +21,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import { useDialogStore } from "@/store/dialogStore";
 
 // ── Safe access to native modules (unchanged) ────────────────────────────────

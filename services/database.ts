@@ -16,8 +16,13 @@ export interface LogEntry {
 
 const DB_NAME = "the25.db";
 
+let _dbInstance: SQLite.SQLiteDatabase | null = null;
+
 async function getDB(): Promise<SQLite.SQLiteDatabase> {
-  return await SQLite.openDatabaseAsync(DB_NAME);
+  if (!_dbInstance) {
+    _dbInstance = await SQLite.openDatabaseAsync(DB_NAME, { useNewConnection: true });
+  }
+  return _dbInstance;
 }
 
 export const initDB = async () => {
@@ -95,7 +100,7 @@ export const deleteAllLogs = async () => {
 
 export const mergeLogsFromBackup = async (backupDbName: string) => {
   const db = await getDB();
-  const backupDb = await SQLite.openDatabaseAsync(backupDbName);
+  const backupDb = await SQLite.openDatabaseAsync(backupDbName, { useNewConnection: true });
   
   try {
     const backupLogs = await backupDb.getAllAsync<LogEntry>("SELECT * FROM logs");
