@@ -247,8 +247,9 @@ export default function LoggingScreen() {
       
       if (activity.trim() || computedUri) {
         const finalEnv = environment === "Custom" ? customEnv.trim() : environment;
+        const finalActivity = activity.trim() || (computedUri ? "No transcript" : "");
         await addLog(
-          activity || "Voice Entry", 
+          finalActivity, 
           mood, 
           productivity, 
           computedUri,
@@ -312,22 +313,30 @@ export default function LoggingScreen() {
           Log Activity
         </Text>
         {/* Save button in header (matches Stitch design) */}
-        <TouchableOpacity
-          onPress={handleSave}
-          disabled={isTranscribing || isStopping || isSaving}
-          className={`rounded-[4px] px-4 py-2 ${
-            isTranscribing || isStopping || isSaving
-              ? `border ${t.border} opacity-40`
-              : t.btnPrimary
-          }`}
-        >
-          <Text
-            style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, letterSpacing: 1 }}
-            className={`uppercase ${isTranscribing || isStopping || isSaving ? t.textSubtle : "text-white"}`}
-          >
-            {isSaving ? "Saving…" : isTranscribing || isStopping ? "Wait…" : "Save"}
-          </Text>
-        </TouchableOpacity>
+        {(() => {
+          const hasContent = activity.trim().length > 0 || isRecording || audioUri !== null;
+          const isBusy = isTranscribing || isStopping || isSaving;
+          const isSaveDisabled = isBusy || !hasContent;
+          
+          return (
+            <TouchableOpacity
+              onPress={handleSave}
+              disabled={isSaveDisabled}
+              className={`rounded-[4px] px-4 py-2 ${
+                isSaveDisabled
+                  ? `border ${t.border} opacity-40`
+                  : t.btnPrimary
+              }`}
+            >
+              <Text
+                style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, letterSpacing: 1 }}
+                className={`uppercase ${isSaveDisabled ? t.textSubtle : "text-white"}`}
+              >
+                {isSaving ? "Saving…" : isTranscribing || isStopping ? "Wait…" : "Save"}
+              </Text>
+            </TouchableOpacity>
+          );
+        })()}
       </View>
 
       <ScrollView
