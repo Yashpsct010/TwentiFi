@@ -24,14 +24,14 @@ export interface AIInsights {
  * Low-level call to Gemini. 
  * Detects environment and uses either Firebase SDK or direct REST API.
  */
-const callGemini = async (prompt: string, apiKey?: string): Promise<string> => {
+const callGemini = async (prompt: string, apiKey?: string, targetModel: string = "gemini-3.1-flash-lite-preview"): Promise<string> => {
   // If SDK is available, use it (Option A - Production)
   if (FirebaseVertexAI) {
     try {
       const { getVertexAI, getGenerativeModel } = FirebaseVertexAI;
       const vertexAI = getVertexAI();
       const model = getGenerativeModel(vertexAI, { 
-        model: "gemini-3.1-flash-lite-preview" 
+        model: targetModel 
       });
 
       const result = await model.generateContent(prompt);
@@ -48,7 +48,7 @@ const callGemini = async (prompt: string, apiKey?: string): Promise<string> => {
     throw new Error("Gemini API Key is required for development/Expo Go. Add it in Settings.");
   }
 
-  const model = "gemini-3.1-flash-lite-preview";
+  const model = targetModel;
   console.log(`[Gemini] Using REST API fallback (model: ${model})`);
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -131,7 +131,10 @@ export const generateAIInsights = async (
   `;
 
   try {
-    const responseText = await callGemini(prompt, apiKey);
+    const responseText = await callGemini(prompt, apiKey, "gemini-3.0-flash").catch(async (e) => {
+      console.log(`[Gemini] gemini-3.0-flash failed in generateAIInsights (${e.message}). Falling back to gemini-2.5-flash.`);
+      return await callGemini(prompt, apiKey, "gemini-2.5-flash");
+    });
     return extractJSON(responseText);
   } catch {
     return {
@@ -188,11 +191,16 @@ export const transcribeWithGemini = async (
       contents: [
         {
           parts: [
-            { text: "Accurately transcribe the speech in the following audio. If the audio is completely silent, contains only static, or has no discernible human speech, reply EXACTLY with 'NO_SPEECH'. Otherwise, reply only with the final transcript text, with no extra framing, markdown formatting, or preamble." },
+            { text: "SYSTEM PROMPT: You are a strict phonetic transcription engine. Your ONLY task is to dictate explicit human speech from this audio exactly as heard. CRITICAL RULES: 1. If you hear ONLY room tone, static, wind, heavy breathing, clothing rustling, or absolute silence, you MUST output precisely this string: 'NO_SPEECH'. 2. Do NOT invent, guess, or hallucinate speech that is not clearly present. 3. Output the raw text only, no preamble or markdown." },
             { inlineData: { mimeType: mimeType, data: base64Audio } }
           ]
         }
-      ]
+      ],
+      generationConfig: {
+        temperature: 0.1,
+        topK: 1,
+        topP: 0.8
+      }
     };
 
     const response = await fetch(url, {
@@ -240,7 +248,7 @@ export const generateNotificationContent = async (
     : "Generate an urgent, slightly edgy Gen-Z push notification reminding the user they completely forgot to track their last time block. Return ONLY a JSON object with 'title' (max 25 chars) and 'body' (max 60 chars) properties. No markdown formatting, exact JSON.";
 
   try {
-    const responseText = await callGemini(prompt, apiKey);
+    const responseText = await callGemini(prompt, apiKey, "gemini-3.1-flash-lite-preview");
     const parsed = extractJSON(responseText);
     if (parsed.title && parsed.body) {
       return { title: parsed.title, body: parsed.body };
@@ -275,7 +283,7 @@ export const expandTaskWithGemini = async (
   `;
 
   try {
-    const responseText = await callGemini(prompt, apiKey);
+    const responseText = await callGemini(prompt, apiKey, "gemini-2.5-flash");
     const parsed = extractJSON(responseText);
     
     if (Array.isArray(parsed) && parsed.length > 0) {
@@ -305,7 +313,7 @@ export const generateDailyQuote = async (apiKey: string): Promise<{quote: string
   `;
 
   try {
-    const responseText = await callGemini(prompt, apiKey);
+    const responseText = await callGemini(prompt, apiKey, "gemini-2.5-flash-lite");
     const parsed = extractJSON(responseText);
     
     if (parsed.quote && parsed.author && parsed.keyword) {
@@ -327,3 +335,43 @@ export const generateDailyQuote = async (apiKey: string): Promise<{quote: string
   }
 };
 
+/**
+ * Automatically categorizes a logged session into a user's defined Project Group 
+ * based on the activity description and transcript context.
+ */
+export const assignGroupWithGemini = async (
+  activity: string,
+  transcript: string,
+  userGroups: string[],
+  apiKey: string
+): Promise<string> => {
+  if (!apiKey || userGroups.length === 0) {
+    return "Uncategorized";
+  }
+
+  const prompt = `
+    The user has logged a focus session.
+    Activity Title: "${activity}"
+    Voice Transcript Context: "${transcript}"
+
+    The user has predefined the following Project Groups: ${JSON.stringify(userGroups)}
+
+    Analyze the title and transcript. Match this activity to the single best-fitting Project Group from the predefined list.
+    If none of the groups match closely, return "Uncategorized".
+    Return ONLY a JSON object with this exact structure:
+    {"groupName": "Selected Group Name"}
+  `;
+
+  try {
+    const responseText = await callGemini(prompt, apiKey, "gemini-2.5-flash-lite");
+    const parsed = extractJSON(responseText);
+    
+    if (parsed.groupName && userGroups.includes(parsed.groupName)) {
+      return parsed.groupName;
+    }
+  } catch (err) {
+    console.warn("Gemini categorization failed, defaulting to Uncategorized", err);
+  }
+  
+  return "Uncategorized";
+};

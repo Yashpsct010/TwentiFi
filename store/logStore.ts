@@ -4,7 +4,7 @@ import * as FileSystem from 'expo-file-system';
 
 interface LogState {
   logs: LogEntry[];
-  addLog: (activity: string, mood: LogEntry['mood'], productivity: number, audioUri?: string | null, environment?: string, tags?: string[], remarks?: string) => Promise<void>;
+  addLog: (activity: string, mood: LogEntry['mood'], productivity: number, audioUri?: string | null, environment?: string, tags?: string[], remarks?: string, groupName?: string) => Promise<void>;
   clearLogs: () => Promise<void>;
   loadLogs: () => Promise<void>;
 }
@@ -19,7 +19,12 @@ export const useLogStore = create<LogState>((set) => ({
       console.error('Failed to load logs:', error);
     }
   },
-  addLog: async (activity, mood, productivity, audioUri, environment, tags, remarks) => {
+// We need to import useSettingsStore implicitly inside addLog since it's a store
+  addLog: async (activity, mood, productivity, audioUri, environment, tags, remarks, groupName) => {
+    // Dynamically retrieve the current duration setting instead of passing it around
+    const { useSettingsStore } = await import('@/store/settingsStore');
+    const currentDuration = useSettingsStore.getState().loggingInterval;
+
     const newLog: LogEntry = {
       id: Math.random().toString(36).substr(2, 9),
       timestamp: new Date().toISOString(),
@@ -30,6 +35,8 @@ export const useLogStore = create<LogState>((set) => ({
       environment,
       tags: tags ? JSON.stringify(tags) : undefined,
       remarks,
+      duration: currentDuration,
+      groupName,
     };
 
     try {

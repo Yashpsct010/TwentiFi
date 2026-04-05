@@ -12,6 +12,8 @@ export interface LogEntry {
   environment?: string;
   tags?: string; // Stored as a serialized JSON array
   remarks?: string;
+  duration?: number;
+  groupName?: string;
 }
 
 const DB_NAME = "the25.db";
@@ -59,6 +61,12 @@ export const initDB = async () => {
   } catch {
     // Column already exists, ignore
   }
+  try {
+    await db.execAsync("ALTER TABLE logs ADD COLUMN duration INTEGER");
+  } catch {}
+  try {
+    await db.execAsync("ALTER TABLE logs ADD COLUMN groupName TEXT");
+  } catch {}
 
   return db;
 };
@@ -66,7 +74,7 @@ export const initDB = async () => {
 export const saveLog = async (log: LogEntry) => {
   const db = await getDB();
   const statement = await db.prepareAsync(
-    "INSERT INTO logs (id, timestamp, activity, mood, productivity, audioUri, environment, tags, remarks) VALUES ($id, $timestamp, $activity, $mood, $productivity, $audio, $env, $tags, $remarks)"
+    "INSERT INTO logs (id, timestamp, activity, mood, productivity, audioUri, environment, tags, remarks, duration, groupName) VALUES ($id, $timestamp, $activity, $mood, $productivity, $audio, $env, $tags, $remarks, $duration, $groupName)"
   );
   try {
     await statement.executeAsync({
@@ -78,7 +86,9 @@ export const saveLog = async (log: LogEntry) => {
       $audio: log.audioUri ?? "",
       $env: log.environment ?? "",
       $tags: log.tags ?? "",
-      $remarks: log.remarks ?? ""
+      $remarks: log.remarks ?? "",
+      $duration: log.duration ?? null,
+      $groupName: log.groupName ?? ""
     });
   } finally {
     await statement.finalizeAsync();
@@ -105,7 +115,7 @@ export const mergeLogsFromBackup = async (backupDbName: string) => {
   try {
     const backupLogs = await backupDb.getAllAsync<LogEntry>("SELECT * FROM logs");
     const statement = await db.prepareAsync(
-      "INSERT OR IGNORE INTO logs (id, timestamp, activity, mood, productivity, audioUri, environment, tags, remarks) VALUES ($id, $timestamp, $activity, $mood, $productivity, $audio, $env, $tags, $remarks)"
+      "INSERT OR IGNORE INTO logs (id, timestamp, activity, mood, productivity, audioUri, environment, tags, remarks, duration, groupName) VALUES ($id, $timestamp, $activity, $mood, $productivity, $audio, $env, $tags, $remarks, $duration, $groupName)"
     );
     try {
       for (const log of backupLogs) {
@@ -118,7 +128,9 @@ export const mergeLogsFromBackup = async (backupDbName: string) => {
           $audio: log.audioUri ?? "",
           $env: log.environment ?? "",
           $tags: log.tags ?? "",
-          $remarks: log.remarks ?? ""
+          $remarks: log.remarks ?? "",
+          $duration: log.duration ?? null,
+          $groupName: log.groupName ?? ""
         });
       }
     } finally {

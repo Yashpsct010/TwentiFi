@@ -1,7 +1,8 @@
-import { transcribeWithGemini } from "@/services/gemini";
+import { transcribeWithGemini, assignGroupWithGemini } from "@/services/gemini";
 import { useLogStore } from "@/store/logStore";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
+import { useGroupStore } from "@/store/groupStore";
 import { useTheme } from "@/hooks/use-theme";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -263,6 +264,16 @@ export default function LoggingScreen() {
       if (activity.trim() || stableUri) {
         const finalEnv = environment === "Custom" ? customEnv.trim() : environment;
         const finalActivity = activity.trim() || (stableUri ? "No transcript" : "");
+        
+        let determinedGroup = "Uncategorized";
+        if (geminiApiKey) {
+          try {
+            determinedGroup = await assignGroupWithGemini(finalActivity, liveTranscript, useGroupStore.getState().groups, geminiApiKey);
+          } catch (e) {
+            console.warn("AI Grouping failed, falling back to Uncategorized", e);
+          }
+        }
+
         await addLog(
           finalActivity, 
           mood, 
@@ -270,7 +281,8 @@ export default function LoggingScreen() {
           stableUri,
           finalEnv || undefined,
           selectedTags.length > 0 ? selectedTags : undefined,
-          remarks.trim() || undefined
+          remarks.trim() || undefined,
+          determinedGroup
         );
         const { isActive, rescheduleNextPulse } = useSessionStore.getState();
         if (isActive) {
