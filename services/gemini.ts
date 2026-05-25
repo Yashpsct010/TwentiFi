@@ -24,14 +24,14 @@ export interface AIInsights {
  * Low-level call to Gemini. 
  * Detects environment and uses either Firebase SDK or direct REST API.
  */
-const callGemini = async (prompt: string, apiKey?: string, targetModel: string = "gemini-3.1-flash-lite-preview"): Promise<string> => {
+const callGemini = async (prompt: string, apiKey?: string, targetModel: string = "gemini-3.1-flash-lite"): Promise<string> => {
   // If SDK is available, use it (Option A - Production)
   if (FirebaseVertexAI) {
     try {
       const { getVertexAI, getGenerativeModel } = FirebaseVertexAI;
       const vertexAI = getVertexAI();
-      const model = getGenerativeModel(vertexAI, { 
-        model: targetModel 
+      const model = getGenerativeModel(vertexAI, {
+        model: targetModel
       });
 
       const result = await model.generateContent(prompt);
@@ -65,7 +65,7 @@ const callGemini = async (prompt: string, apiKey?: string, targetModel: string =
       const errorText = await response.text().catch(() => "");
       console.error(`[Gemini REST] HTTP ${response.status} from ${model}:`, errorText);
       let errorData: any = {};
-      try { errorData = JSON.parse(errorText); } catch {}
+      try { errorData = JSON.parse(errorText); } catch { }
       const message = errorData?.error?.message || errorText || `HTTP ${response.status}`;
       throw new Error(`Gemini API failed (${response.status}): ${message}`);
     }
@@ -86,17 +86,17 @@ const callGemini = async (prompt: string, apiKey?: string, targetModel: string =
 const extractJSON = (raw: string): any => {
   // Strip markdown code fences
   let cleaned = raw.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "").trim();
-  
+
   // Try direct parse first
-  try { return JSON.parse(cleaned); } catch {}
-  
+  try { return JSON.parse(cleaned); } catch { }
+
   // Find the first { and last } to extract the JSON object
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
   if (start !== -1 && end !== -1 && end > start) {
-    try { return JSON.parse(cleaned.substring(start, end + 1)); } catch {}
+    try { return JSON.parse(cleaned.substring(start, end + 1)); } catch { }
   }
-  
+
   console.warn("[Gemini] Could not parse JSON from response:", raw.substring(0, 200));
   throw new Error("Failed to parse Gemini JSON response");
 };
@@ -119,7 +119,7 @@ export const generateAIInsights = async (
   }
 
   const logsSummary = logs.map(l => `- At ${new Date(l.timestamp).toLocaleTimeString()}: ${l.activity} (Mood: ${l.mood}, Prod: ${l.productivity}/5)`).join('\n');
-  
+
   const prompt = `
     Analyze these productivity logs for today:
     ${logsSummary}
@@ -161,7 +161,7 @@ export const transcribeWithGemini = async (
     if (Platform.OS === 'android' && !audioUri.startsWith('file://')) {
       cleanUri = 'file://' + audioUri;
     }
-    
+
     // Check if file exists
     const fileInfo = await FileSystem.getInfoAsync(cleanUri);
     if (!fileInfo.exists) {
@@ -185,8 +185,8 @@ export const transcribeWithGemini = async (
     };
     const mimeType = mimeMap[ext] || `audio/${ext}`;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${apiKey}`;
-    
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
+
     const requestBody = {
       contents: [
         {
@@ -210,13 +210,13 @@ export const transcribeWithGemini = async (
     });
 
     if (!response.ok) {
-        const errorText = await response.text().catch(() => "");
-        throw new Error(`Gemini API Failed (${response.status}): ${errorText}`);
+      const errorText = await response.text().catch(() => "");
+      throw new Error(`Gemini API Failed (${response.status}): ${errorText}`);
     }
 
     const data = await response.json();
     const transcript = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    
+
     if (!transcript) throw new Error("Received empty transcript from Gemini.");
     if (transcript.trim() === "NO_SPEECH" || transcript.trim() === "'NO_SPEECH'") {
       return ""; // Handled gracefully by the UI fallback
@@ -243,23 +243,23 @@ export const generateNotificationContent = async (
     throw new Error("API key missing");
   }
 
-  const prompt = type === 'log_prompt' 
+  const prompt = type === 'log_prompt'
     ? "Generate a short, engaging, Gen-Z flavored push notification to remind the user to log their past 20 minutes of activity. Return ONLY a JSON object with 'title' (max 25 chars) and 'body' (max 60 chars) properties. No markdown formatting, exact JSON."
     : "Generate an urgent, slightly edgy Gen-Z push notification reminding the user they completely forgot to track their last time block. Return ONLY a JSON object with 'title' (max 25 chars) and 'body' (max 60 chars) properties. No markdown formatting, exact JSON.";
 
   try {
-    const responseText = await callGemini(prompt, apiKey, "gemini-3.1-flash-lite-preview");
+    const responseText = await callGemini(prompt, apiKey, "gemini-3.1-flash-lite");
     const parsed = extractJSON(responseText);
     if (parsed.title && parsed.body) {
       return { title: parsed.title, body: parsed.body };
     }
     throw new Error("Missing title or body");
   } catch (err) {
-      console.warn("Failed Gemini notification, using fallback", err);
-      if (type === 'log_prompt') {
-          return { title: "Vibe Check \u23F1\uFE0F", body: "20 mins are up! What did you actually get done?" };
-      }
-      return { title: "Bro, you ghosted? \uD83D\uDC7B", body: "We need that log update ASAP." };
+    console.warn("Failed Gemini notification, using fallback", err);
+    if (type === 'log_prompt') {
+      return { title: "Vibe Check \u23F1\uFE0F", body: "Time's up! Time to write it down \ud83d\udcdd" };
+    }
+    return { title: "Bro, you ghosted? \uD83D\uDC7B", body: "We need that log update ASAP." };
   }
 };
 
@@ -285,7 +285,7 @@ export const expandTaskWithGemini = async (
   try {
     const responseText = await callGemini(prompt, apiKey, "gemini-2.5-flash");
     const parsed = extractJSON(responseText);
-    
+
     if (Array.isArray(parsed) && parsed.length > 0) {
       return parsed.map(String);
     }
@@ -299,7 +299,7 @@ export const expandTaskWithGemini = async (
 /**
  * Generates a random daily productivity quote and a matching image keyword.
  */
-export const generateDailyQuote = async (apiKey: string): Promise<{quote: string; author: string; keyword: string}> => {
+export const generateDailyQuote = async (apiKey: string): Promise<{ quote: string; author: string; keyword: string }> => {
   if (!apiKey) {
     throw new Error("API key missing.");
   }
@@ -315,12 +315,12 @@ export const generateDailyQuote = async (apiKey: string): Promise<{quote: string
   try {
     const responseText = await callGemini(prompt, apiKey, "gemini-2.5-flash-lite");
     const parsed = extractJSON(responseText);
-    
+
     if (parsed.quote && parsed.author && parsed.keyword) {
-      return { 
-        quote: parsed.quote, 
-        author: parsed.author, 
-        keyword: parsed.keyword 
+      return {
+        quote: parsed.quote,
+        author: parsed.author,
+        keyword: parsed.keyword
       };
     }
     throw new Error("Invalid quote JSON format.");
@@ -365,13 +365,61 @@ export const assignGroupWithGemini = async (
   try {
     const responseText = await callGemini(prompt, apiKey, "gemini-2.5-flash-lite");
     const parsed = extractJSON(responseText);
-    
+
     if (parsed.groupName && userGroups.includes(parsed.groupName)) {
       return parsed.groupName;
     }
   } catch (err) {
     console.warn("Gemini categorization failed, defaulting to Uncategorized", err);
   }
-  
+
   return "Uncategorized";
 };
+
+/**
+ * Generates an ordered, actionable task plan for a milestone using Gemini.
+ * Returns a list of task strings (7–15 items).
+ */
+export const generateMilestonePlan = async (
+  title: string,
+  description: string,
+  deadline: string | undefined,
+  apiKey: string,
+): Promise<string[]> => {
+  if (!apiKey) {
+    throw new Error("API key missing. Add it in Settings to use AI plan generation.");
+  }
+
+  const deadlineClause = deadline
+    ? `The user has a deadline of: ${deadline}.`
+    : "There is no fixed deadline.";
+
+  const prompt = `
+    The user wants to achieve this milestone: "${title}"
+    Additional context: "${description || 'No extra context provided.'}"
+    ${deadlineClause}
+
+    Generate an ordered, actionable list of tasks to complete this milestone.
+    Rules:
+    - 7 to 15 tasks maximum
+    - Each task must be short, specific, and actionable (under 10 words)
+    - Order them logically from start to finish
+    - Do NOT add numbering or bullet points inside the strings
+    - Return ONLY a JSON array of strings. Example: ["Research the topic", "Set up project folder", "Complete chapter 1"]
+    No markdown, no explanation, just the JSON array.
+  `;
+
+  try {
+    const responseText = await callGemini(prompt, apiKey, "gemini-2.5-flash");
+    const parsed = extractJSON(responseText);
+
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed.map(String);
+    }
+    throw new Error("Invalid response: expected a JSON array.");
+  } catch (err) {
+    console.error("Failed to generate milestone plan:", err);
+    throw new Error("Failed to generate plan. Check your API key or try again.");
+  }
+};
+

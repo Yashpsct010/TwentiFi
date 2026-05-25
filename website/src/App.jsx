@@ -1,6 +1,5 @@
-import React from 'react';
 import { motion } from 'framer-motion';
-import { Mic, Calendar, Timer, Sparkles, Download, ArrowRight, User } from 'lucide-react';
+import { ArrowRight, Calendar, Download, Mic, Sparkles, Timer, User } from 'lucide-react';
 
 const FadeIn = ({ children, delay = 0, className = '' }) => (
   <motion.div
@@ -35,7 +34,7 @@ const FeatureCard = ({ icon: Icon, title, desc, delay }) => (
 export default function App() {
   return (
     <div className="min-h-screen bg-background text-on-surface overflow-x-hidden selection:bg-primary/30">
-      
+
       {/* Navbar Minimal */}
       <nav className="fixed top-0 inset-x-0 z-50 h-24 flex items-center">
         <div className="container mx-auto px-6 flex justify-between items-center">
@@ -60,7 +59,7 @@ export default function App() {
       {/* Hero Section */}
       <header className="relative pt-28 pb-32 lg:pt-32 lg:pb-48 px-6">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-primary/20 rounded-full blur-[120px] pointer-events-none" />
-        
+
         <div className="container mx-auto max-w-5xl relative z-10 text-center">
           <FadeIn>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/20 bg-primary/5 mb-8">
@@ -68,20 +67,20 @@ export default function App() {
               <span className="uppercase tracking-[0.2em] text-xs font-bold text-primary">The Ethereal Intelligence</span>
             </div>
           </FadeIn>
-          
+
           <FadeIn delay={0.1}>
             <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[1.1] mb-8">
               AI life-logging in <br className="hidden md:block" />
               <span className="text-transparent bg-clip-text bg-primary-gradient">20-min pulses.</span>
             </h1>
           </FadeIn>
-          
+
           <FadeIn delay={0.2}>
             <p className="text-lg md:text-xl text-on-surface-variant max-w-2xl mx-auto mb-12 leading-relaxed">
               Don't just track your time. Understand your vibe. TwentiFi breaks your day into focused pulses, using voice AI to generate deep insights into your productivity and mood.
             </p>
           </FadeIn>
-          
+
           <FadeIn delay={0.3} className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <motion.a
               href="https://github.com/Yashpsct010/TwentiFi/releases/latest/download/twentifi.apk"
@@ -107,16 +106,16 @@ export default function App() {
       {/* Layered Interface Mockup Illusion */}
       <section className="px-6 pb-32">
         <FadeIn className="container mx-auto max-w-6xl">
-           <div className="w-full h-[400px] md:h-[600px] glass-panel rounded-[40px] relative overflow-hidden flex items-center justify-center border-t border-l border-white/10">
-              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 mix-blend-overlay" />
-              <div className="w-64 h-64 bg-secondary/20 rounded-full blur-[80px] absolute top-1/2 left-1/4" />
-              <div className="w-48 h-48 bg-primary/20 rounded-full blur-[60px] absolute bottom-1/4 right-1/4" />
-              
-              <div className="relative z-10 text-center px-4">
-                 <h2 className="font-display font-black text-3xl md:text-5xl tracking-tight mb-4">Focus. Log. <span className="text-primary">Evolve.</span></h2>
-                 <p className="text-on-surface-variant font-medium">Experience the dark mode interface built for extreme focus.</p>
-              </div>
-           </div>
+          <div className="w-full h-[400px] md:h-[600px] glass-panel rounded-[40px] relative overflow-hidden flex items-center justify-center border-t border-l border-white/10">
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 mix-blend-overlay" />
+            <div className="w-64 h-64 bg-secondary/20 rounded-full blur-[80px] absolute top-1/2 left-1/4" />
+            <div className="w-48 h-48 bg-primary/20 rounded-full blur-[60px] absolute bottom-1/4 right-1/4" />
+
+            <div className="relative z-10 text-center px-4">
+              <h2 className="font-display font-black text-3xl md:text-5xl tracking-tight mb-4">Focus. Log. <span className="text-primary">Evolve.</span></h2>
+              <p className="text-on-surface-variant font-medium">Experience the dark mode interface built for extreme focus.</p>
+            </div>
+          </div>
         </FadeIn>
       </section>
 
@@ -129,19 +128,19 @@ export default function App() {
           </FadeIn>
 
           <div className="grid md:grid-cols-3 gap-6">
-            <FeatureCard 
+            <FeatureCard
               icon={Mic}
               title="Voice Logging & Insights"
-              desc="Just speak. We use Gemini 3.1 Flash lite preview to perfectly transcribe your entry and extract a deep analysis of your emotional vibe and productivity."
+              desc="Just speak. We use Gemini 3.1 Flash lite to perfectly transcribe your entry and extract a deep analysis of your emotional vibe and productivity."
               delay={0.1}
             />
-            <FeatureCard 
+            <FeatureCard
               icon={Timer}
               title="20-Min Pulses"
               desc="Work in dedicated blocks. TwentiFi autonomously nudges you every 20 minutes to capture what you actually got done. No cap."
               delay={0.2}
             />
-            <FeatureCard 
+            <FeatureCard
               icon={Calendar}
               title="Streak Calendar"
               desc="Visualize your consistency over the last 6 months. Maintain your momentum and watch your daily goal progress fill up."
@@ -155,44 +154,44 @@ export default function App() {
       <section id="guide" className="py-32 px-6">
         <div className="container mx-auto max-w-5xl">
           <FadeIn className="mb-16">
-             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-tertiary/20 bg-tertiary/5 mb-6">
-               <User className="w-4 h-4 text-tertiary" />
-               <span className="uppercase tracking-[0.2em] text-[10px] font-bold text-tertiary">User Setup</span>
-             </div>
-             <h2 className="font-display font-black text-4xl md:text-5xl tracking-tight mb-6">Power it with Gemini</h2>
-             <p className="text-on-surface-variant text-lg max-w-2xl lg:mb-12">TwentiFi requires your own Google Gemini API key to operate its AI features. It's completely free tier and easy to setup.</p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-tertiary/20 bg-tertiary/5 mb-6">
+              <User className="w-4 h-4 text-tertiary" />
+              <span className="uppercase tracking-[0.2em] text-[10px] font-bold text-tertiary">User Setup</span>
+            </div>
+            <h2 className="font-display font-black text-4xl md:text-5xl tracking-tight mb-6">Power it with Gemini</h2>
+            <p className="text-on-surface-variant text-lg max-w-2xl lg:mb-12">TwentiFi requires your own Google Gemini API key to operate its AI features. It's completely free tier and easy to setup.</p>
           </FadeIn>
-          
+
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <FadeIn delay={0.2} className="space-y-8">
-               <div className="flex gap-6">
-                 <div className="w-12 h-12 rounded-full bg-surface-highest flex items-center justify-center font-bold text-primary shrink-0 border border-outline-variant/30">1</div>
-                 <div>
-                   <h4 className="text-xl font-bold mb-2">Get an API Key</h4>
-                   <p className="text-on-surface-variant text-sm leading-relaxed">Head over to <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-primary underline">Google AI Studio</a> and generate a free API key. No credit card required.</p>
-                 </div>
-               </div>
-               <div className="flex gap-6">
-                 <div className="w-12 h-12 rounded-full bg-surface-highest flex items-center justify-center font-bold text-primary shrink-0 border border-outline-variant/30">2</div>
-                 <div>
-                   <h4 className="text-xl font-bold mb-2">Paste in Onboarding</h4>
-                   <p className="text-on-surface-variant text-sm leading-relaxed">When you first open TwentiFi, simply paste your key into the designated input field during the onboarding flow.</p>
-                 </div>
-               </div>
-               <div className="flex gap-6">
-                 <div className="w-12 h-12 rounded-full bg-surface-highest flex items-center justify-center font-bold text-primary shrink-0 border border-outline-variant/30">3</div>
-                 <div>
-                   <h4 className="text-xl font-bold mb-2">Start Logging</h4>
-                   <p className="text-on-surface-variant text-sm leading-relaxed">That's it. You now have access to hyper-fast voice transcription and personalized Gen-Z nudges via Gemini 1.5 Flash.</p>
-                 </div>
-               </div>
+              <div className="flex gap-6">
+                <div className="w-12 h-12 rounded-full bg-surface-highest flex items-center justify-center font-bold text-primary shrink-0 border border-outline-variant/30">1</div>
+                <div>
+                  <h4 className="text-xl font-bold mb-2">Get an API Key</h4>
+                  <p className="text-on-surface-variant text-sm leading-relaxed">Head over to <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-primary underline">Google AI Studio</a> and generate a free API key. No credit card required.</p>
+                </div>
+              </div>
+              <div className="flex gap-6">
+                <div className="w-12 h-12 rounded-full bg-surface-highest flex items-center justify-center font-bold text-primary shrink-0 border border-outline-variant/30">2</div>
+                <div>
+                  <h4 className="text-xl font-bold mb-2">Paste in Onboarding</h4>
+                  <p className="text-on-surface-variant text-sm leading-relaxed">When you first open TwentiFi, simply paste your key into the designated input field during the onboarding flow.</p>
+                </div>
+              </div>
+              <div className="flex gap-6">
+                <div className="w-12 h-12 rounded-full bg-surface-highest flex items-center justify-center font-bold text-primary shrink-0 border border-outline-variant/30">3</div>
+                <div>
+                  <h4 className="text-xl font-bold mb-2">Start Logging</h4>
+                  <p className="text-on-surface-variant text-sm leading-relaxed">That's it. You now have access to hyper-fast voice transcription and personalized Gen-Z nudges via Gemini 1.5 Flash.</p>
+                </div>
+              </div>
             </FadeIn>
-            
+
             <FadeIn delay={0.4} className="bg-surface-highest/50 rounded-3xl p-2 border border-outline-variant/30 shadow-2xl relative">
               <div className="absolute inset-0 bg-primary-gradient opacity-5 mix-blend-color rounded-3xl pointer-events-none" />
-              <img 
-                src="/aistudio-guide.gif" 
-                alt="Getting a Gemini API Key from Google AI Studio" 
+              <img
+                src="/aistudio-guide.gif"
+                alt="Getting a Gemini API Key from Google AI Studio"
                 className="w-full h-auto rounded-2xl border border-white/5 shadow-inner"
               />
               {/* Fallback text if GIF is missing */}
@@ -206,27 +205,27 @@ export default function App() {
 
       {/* CTA Section */}
       <section id="download" className="py-32 px-6">
-         <FadeIn className="container mx-auto max-w-4xl glass-panel rounded-[40px] p-12 md:p-24 text-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-primary-gradient opacity-10 mix-blend-color" />
-            <div className="relative z-10">
-               <h2 className="font-display font-black text-4xl md:text-6xl tracking-tight mb-8">Ready to lock in?</h2>
-               <p className="text-on-surface-variant text-lg md:text-xl mb-12 max-w-2xl mx-auto">Maintain your streak. Evolve your focus.</p>
-               <motion.a
-                href="https://github.com/Yashpsct010/TwentiFi/releases/latest/download/twentifi.apk"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="primary-button inline-flex items-center px-10 py-6 rounded-full text-lg tracking-widest uppercase"
-              >
-                <Download className="mr-3 w-6 h-6" />
-                <span>Download APK</span>
-              </motion.a>
-            </div>
-         </FadeIn>
+        <FadeIn className="container mx-auto max-w-4xl glass-panel rounded-[40px] p-12 md:p-24 text-center relative overflow-hidden">
+          <div className="absolute inset-0 bg-primary-gradient opacity-10 mix-blend-color" />
+          <div className="relative z-10">
+            <h2 className="font-display font-black text-4xl md:text-6xl tracking-tight mb-8">Ready to lock in?</h2>
+            <p className="text-on-surface-variant text-lg md:text-xl mb-12 max-w-2xl mx-auto">Maintain your streak. Evolve your focus.</p>
+            <motion.a
+              href="https://github.com/Yashpsct010/TwentiFi/releases/latest/download/twentifi.apk"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="primary-button inline-flex items-center px-10 py-6 rounded-full text-lg tracking-widest uppercase"
+            >
+              <Download className="mr-3 w-6 h-6" />
+              <span>Download APK</span>
+            </motion.a>
+          </div>
+        </FadeIn>
       </section>
 
       {/* Footer */}
       <footer className="py-12 border-t border-outline-variant/10 text-center">
-         <p className="text-on-surface-variant text-sm font-medium tracking-wide uppercase">&copy; {new Date().getFullYear()} TwentiFi. Built with React & Tailwind.</p>
+        <p className="text-on-surface-variant text-sm font-medium tracking-wide uppercase">&copy; {new Date().getFullYear()} TwentiFi. Built with React & Tailwind.</p>
       </footer>
     </div>
   );

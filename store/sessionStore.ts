@@ -1,8 +1,8 @@
 import {
-  cancelAllScheduledNotificationsAsync,
+  cancelNotification,
   requestPermissions,
-  scheduleLoggingNotification,
-  scheduleReminderNotification,
+  schedulePulseNotification,
+  scheduleForgotTimerReminder,
 } from "@/services/notifications";
 import { useSettingsStore } from "@/store/settingsStore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -13,8 +13,11 @@ interface SessionState {
   isActive: boolean;
   startTime: number | null;
   endTime: number | null;
+  activeMilestoneId: string | null;
+  pulseNotificationId: string | null;
+  forgotTimerNotificationId: string | null;
   goals: { id: string; text: string; completed: boolean }[];
-  startSession: (goals: string[]) => Promise<void>;
+  startSession: (goals: string[], milestoneId?: string) => Promise<void>;
   endSession: () => Promise<void>;
   toggleGoal: (id: string) => void;
   addGoal: (text: string) => void;
@@ -30,18 +33,28 @@ export const useSessionStore = create<SessionState>()(
       isActive: false,
       startTime: null,
       endTime: null,
+      activeMilestoneId: null,
       goals: [],
-      startSession: async (goals) => {
+      startSession: async (goals, milestoneId) => {
         set({
           isActive: true,
           startTime: Date.now(),
           endTime: null,
+          activeMilestoneId: milestoneId ?? null,
+          pulseNotificationId: null,
+          forgotTimerNotificationId: null,
           goals: goals.map((g) => ({
             id: Math.random().toString(36).substr(2, 9),
             text: g,
             completed: false,
           })),
         });
+        
+        const granted = await requestPermissions();
+        if (granted) {
+          const forgotId = await scheduleForgotTimerReminder();
+          set({ forgotTimerNotificationId: forgotId });
+        }
         
         // Schedule first pulse & reminder
         await get().rescheduleNextPulse();
@@ -51,30 +64,34 @@ export const useSessionStore = create<SessionState>()(
           const granted = await requestPermissions();
           if (!granted) return;
 
-          const { loggingInterval, missedLogReminders } = useSettingsStore.getState();
+          const { loggingInterval } = useSettingsStore.getState();
           
-          // Cancel previous triggers to avoid overlap
-          await cancelAllScheduledNotificationsAsync();
+          const state = get();
+          await cancelNotification(state.pulseNotificationId);
 
-          // Schedule the pulse with randomized local text (undefined uses fallback)
-          await scheduleLoggingNotification(loggingInterval, undefined);
-
-          // Schedule follow-up reminder if enabled (pulse interval + 5 mins)
-          if (missedLogReminders) {
-            await scheduleReminderNotification(loggingInterval + 5, undefined);
-          }
+          const pulseId = await schedulePulseNotification(loggingInterval);
+          set({ pulseNotificationId: pulseId });
         } catch (error) {
           console.warn("Rescheduling notifications failed:", error);
         }
       },
       endSession: async () => {
-        // Always reset state regardless of notification errors
         try {
-          await cancelAllScheduledNotificationsAsync();
+          const state = get();
+          await cancelNotification(state.pulseNotificationId);
+          await cancelNotification(state.forgotTimerNotificationId);
         } catch (e) {
           console.warn('Could not cancel notifications on session end:', e);
         } finally {
-          set({ isActive: false, startTime: null, endTime: null, goals: [] });
+          set({
+            isActive: false,
+            startTime: null,
+            endTime: null,
+            activeMilestoneId: null,
+            pulseNotificationId: null,
+            forgotTimerNotificationId: null,
+            goals: []
+          });
         }
       },
       toggleGoal: (id) =>

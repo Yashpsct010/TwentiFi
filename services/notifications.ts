@@ -65,26 +65,23 @@ export async function requestPermissions() {
   }
 }
 
-export async function scheduleLoggingNotification(
+export async function schedulePulseNotification(
   intervalMinutes: number = 20,
-  content?: { title: string; body: string }
-) {
-  if (Platform.OS === "web") return; // Skip notifications on web
+): Promise<string | null> {
+  if (Platform.OS === "web") return null;
 
-  let notificationContent = content || getRandomLogNotification();
-  if (!content) {
-    const { geminiApiKey } = useSettingsStore.getState();
-    if (geminiApiKey) {
-      try {
-        notificationContent = await generateNotificationContent(geminiApiKey, 'log_prompt');
-      } catch (e) {
-        console.warn("Gemini notification generation failed, using fallback.");
-      }
+  let notificationContent = getRandomLogNotification();
+  const { geminiApiKey } = useSettingsStore.getState();
+  if (geminiApiKey) {
+    try {
+      notificationContent = await generateNotificationContent(geminiApiKey, 'log_prompt');
+    } catch (e) {
+      console.warn("Gemini notification generation failed, using fallback.");
     }
   }
 
   try {
-    await Notifications.scheduleNotificationAsync({
+    return await Notifications.scheduleNotificationAsync({
       content: {
         title: notificationContent.title,
         body: notificationContent.body,
@@ -98,52 +95,79 @@ export async function scheduleLoggingNotification(
       },
     });
   } catch (error) {
-    console.warn("Failed to schedule notification:", error);
+    console.warn("Failed to schedule pulse:", error);
+    return null;
   }
 }
 
-export async function scheduleReminderNotification(
-  delayMinutes: number = 5,
-  content?: { title: string; body: string }
-) {
-  if (Platform.OS === "web") return; // Skip notifications on web
-
-  let notificationContent = content || getRandomReminderNotification();
-  if (!content) {
-    const { geminiApiKey } = useSettingsStore.getState();
-    if (geminiApiKey) {
-      try {
-        notificationContent = await generateNotificationContent(geminiApiKey, 'reminder');
-      } catch (e) {
-        console.warn("Gemini notification reminder generation failed, using fallback.");
-      }
-    }
-  }
+export async function scheduleForgotTimerReminder(): Promise<string | null> {
+  if (Platform.OS === "web") return null;
 
   try {
-    await Notifications.scheduleNotificationAsync({
+    return await Notifications.scheduleNotificationAsync({
       content: {
-        title: notificationContent.title,
-        body: notificationContent.body,
-        data: { type: "reminder" },
+        title: "Your timer is still running! ⏱️",
+        body: "Did you forget to turn it off? End your session to save your logs.",
+        data: { type: "forgot_timer" },
+        sound: true,
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        seconds: delayMinutes * 60,
+        seconds: 2 * 60 * 60, // 2 hours
         repeats: false,
       },
     });
   } catch (error) {
-    console.warn("Failed to schedule reminder:", error);
+    console.warn("Failed to schedule forgot timer reminder:", error);
+    return null;
+  }
+}
+
+export async function scheduleEndOfDayHabitReminder(endOfDay: string): Promise<string | null> {
+  if (Platform.OS === "web") return null;
+
+  try {
+    const [hoursStr, minutesStr] = endOfDay.split(':');
+    let targetHour = parseInt(hoursStr, 10);
+    const targetMinute = parseInt(minutesStr, 10);
+
+    // Schedule 1 hour before end of day
+    targetHour -= 1;
+    if (targetHour < 0) targetHour = 23;
+
+    return await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "Almost the end of the day! 🌅",
+        body: "You still have some open habits. Don't forget to complete them!",
+        data: { type: "eod_reminder" },
+        sound: true,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour: targetHour,
+        minute: targetMinute,
+      },
+    });
+  } catch (error) {
+    console.warn("Failed to schedule end of day reminder:", error);
+    return null;
+  }
+}
+
+export async function cancelNotification(identifier: string | null) {
+  if (Platform.OS === "web" || !identifier) return;
+  try {
+    await Notifications.cancelScheduledNotificationAsync(identifier);
+  } catch (error) {
+    console.warn("Failed to cancel notification:", error);
   }
 }
 
 export async function cancelAllScheduledNotificationsAsync() {
-  if (Platform.OS === "web") return; // Skip on web
-
+  if (Platform.OS === "web") return;
   try {
     await Notifications.cancelAllScheduledNotificationsAsync();
   } catch (error) {
-    console.warn("Failed to cancel notifications:", error);
+    console.warn("Failed to cancel all notifications:", error);
   }
 }

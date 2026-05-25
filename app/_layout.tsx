@@ -19,6 +19,7 @@ import {
 } from '@expo-google-fonts/inter';
 
 import { useSettingsStore } from '@/store/settingsStore';
+import { useMilestoneStore } from '@/store/milestoneStore';
 import CustomDialog from '@/components/CustomDialog';
 
 // Configure how notifications are handled when the app is in the foreground
@@ -46,18 +47,27 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
-  // Initialize DB and load logs
+  // Initialize DB, load logs, reset habits if new day
   React.useEffect(() => {
     const setup = async () => {
       try {
         await initDB();
         await useLogStore.getState().loadLogs();
         
+        // Reset habit milestone tasks if a new calendar day has started
+        useMilestoneStore.getState().resetHabitsIfNewDay();
+
         // Re-hydrate any active session notifications if the app restarted
         const sessionState = useSessionStore.getState();
         if (sessionState.isActive) {
           console.log('[TwentiFi] Active session found on boot. Rescheduling notifications.');
           await sessionState.rescheduleNextPulse().catch(e => console.error(e));
+        }
+
+        // Reschedule EOD reminder to ensure it's active
+        const settings = useSettingsStore.getState();
+        if (settings.hasCompletedOnboarding) {
+          await settings.setEndOfDay(settings.endOfDay).catch(e => console.error(e));
         }
       } catch (error) {
         console.error('Failed to initialize app data:', error);
@@ -105,6 +115,7 @@ export default function RootLayout() {
           <Stack.Screen name="onboarding" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="logging" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="milestones" options={{ presentation: 'modal', headerShown: false }} />
         </Stack>
         <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
         <CustomDialog />

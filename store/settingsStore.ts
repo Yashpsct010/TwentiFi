@@ -1,7 +1,11 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { cancelAllScheduledNotificationsAsync } from '@/services/notifications';
+import { 
+  cancelAllScheduledNotificationsAsync,
+  cancelNotification,
+  scheduleEndOfDayHabitReminder 
+} from '@/services/notifications';
 
 interface SettingsState {
   userName: string;
@@ -14,10 +18,11 @@ interface SettingsState {
   hasCompletedOnboarding: boolean;
   theme: 'light' | 'dark';
   customTags: string[];
+  eodNotificationId: string | null;
   setUserName: (name: string) => void;
   setGeminiApiKey: (key: string) => void;
   setStartOfDay: (time: string) => void;
-  setEndOfDay: (time: string) => void;
+  setEndOfDay: (time: string) => Promise<void>;
   setLoggingInterval: (interval: number) => void;
   toggleActivityPrompts: () => Promise<void>;
   toggleMissedLogReminders: () => Promise<void>;
@@ -40,12 +45,19 @@ export const useSettingsStore = create<SettingsState>()(
       hasCompletedOnboarding: false,
       theme: 'light',
       customTags: [],
+      eodNotificationId: null,
       setUserName: (userName) => set({ userName }),
       setGeminiApiKey: (geminiApiKey) => set({ geminiApiKey }),
       setHasCompletedOnboarding: (hasCompletedOnboarding) => set({ hasCompletedOnboarding }),
       setTheme: (theme) => set({ theme }),
       setStartOfDay: (startOfDay) => set({ startOfDay }),
-      setEndOfDay: (endOfDay) => set({ endOfDay }),
+      setEndOfDay: async (endOfDay) => {
+        set({ endOfDay });
+        const state = get();
+        await cancelNotification(state.eodNotificationId);
+        const newId = await scheduleEndOfDayHabitReminder(endOfDay);
+        set({ eodNotificationId: newId });
+      },
       addCustomTag: (tag) => set((state) => {
         if (state.customTags.length >= 5 || state.customTags.includes(tag.trim())) return state;
         return { customTags: [...state.customTags, tag.trim()] };

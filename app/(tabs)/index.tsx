@@ -1,7 +1,9 @@
+import * as Haptics from 'expo-haptics';
 import { expandTaskWithGemini } from "@/services/gemini";
 import WisdomPulse from "@/components/WisdomPulse";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
+import { useMilestoneStore } from "@/store/milestoneStore";
 import { useTheme } from "@/hooks/use-theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -17,6 +19,13 @@ import {
 import { useDialogStore } from "@/store/dialogStore";
 import { TouchableOpacity as GHTouchableOpacity } from "react-native-gesture-handler";
 import DraggableFlatList from "react-native-draggable-flatlist";
+import Svg, { Circle } from "react-native-svg";
+
+// Ring dimensions for circular progress
+const RING_SIZE = 44;
+const STROKE = 3;
+const RADIUS = (RING_SIZE - STROKE) / 2;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export default function HomeScreen() {
   const {
@@ -45,7 +54,30 @@ export default function HomeScreen() {
   const router = useRouter();
   const lapStartOffset = useRef(0);
 
+  // ── Milestone store ────────────────────────────────────────────────────────
+  const { milestones, finalizeSession } = useMilestoneStore();
+  const activeMilestones = milestones.filter((m) => !m.isCompleted);
 
+  const [selectedMilestoneId, setSelectedMilestoneId] = useState<string | null>(null);
+
+  const selectedMilestone = activeMilestones.find((m) => m.id === selectedMilestoneId) ?? null;
+
+  // Tasks for session preview: carried first, then pending
+  const sessionPreviewTasks = selectedMilestone
+    ? [
+        ...selectedMilestone.tasks.filter((tk) => tk.status === "carried"),
+        ...selectedMilestone.tasks.filter((tk) => tk.status === "pending"),
+      ]
+    : [];
+
+  // Overall progress ring = completed / total across ALL active milestones
+  const totalAllTasks = activeMilestones.reduce((s, m) => s + m.tasks.length, 0);
+  const doneAllTasks = activeMilestones.reduce(
+    (s, m) => s + m.tasks.filter((tk) => tk.status === "completed").length,
+    0
+  );
+  const overallProgress = totalAllTasks > 0 ? doneAllTasks / totalAllTasks : 0;
+  const ringOffset = CIRCUMFERENCE * (1 - overallProgress);
 
   React.useEffect(() => {
     let interval: any;
@@ -71,6 +103,7 @@ export default function HomeScreen() {
   }, [isActive, startTime, isPaused]);
 
   const handlePause = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (isPaused) {
       if (startTime) {
         const startTimeNum =
@@ -104,16 +137,8 @@ export default function HomeScreen() {
 
   const handleStart = () => {
     try {
-      const now = new Date();
-      const [startH, startM] = startOfDay.split(":").map(Number);
-      const [endH, endM] = endOfDay.split(":").map(Number);
-      const startTimeToday = new Date(now);
-      startTimeToday.setHours(startH, startM, 0);
-      const endTimeToday = new Date(now);
-      endTimeToday.setHours(endH, endM, 0);
-      const isOutside = now < startTimeToday || now > endTimeToday;
-      if (isOutside) console.warn("Starting session outside of configured day boundaries.");
-      startSession(tempGoals);
+      const taskTexts = sessionPreviewTasks.map((tk) => tk.text);
+      startSession(taskTexts, selectedMilestoneId ?? undefined);
       setTempGoals([]);
     } catch (err) {
       console.error("Failed to start session:", err);
@@ -122,11 +147,19 @@ export default function HomeScreen() {
 
   const handleEnd = async () => {
     try {
+      // Finalize milestone tasks before clearing session state
+      const { activeMilestoneId } = useSessionStore.getState();
+      if (activeMilestoneId) {
+        const completedIds = goals
+          .filter((g) => g.completed)
+          .map((g) => g.id);
+        finalizeSession(activeMilestoneId, completedIds);
+      }
       await endSession();
+      setSelectedMilestoneId(null);
     } catch (err) {
-      console.error('Failed to end session:', err);
-      // Force-reset as fallback so the UI never gets stuck
-      useSessionStore.setState({ isActive: false, startTime: null, endTime: null, goals: [] });
+      console.error("Failed to end session:", err);
+      useSessionStore.setState({ isActive: false, startTime: null, endTime: null, activeMilestoneId: null, goals: [] });
     }
   };
 
@@ -185,7 +218,7 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingTop: 56, paddingBottom: 40, paddingHorizontal: 24 }}
         >
-          {/* Header */}
+          {/* ── Header ─────────────────────────────────────────────────── */}
           <View className="flex-row justify-between items-center mb-10">
             <View>
               <Text
@@ -201,15 +234,59 @@ export default function HomeScreen() {
                 {userName}
               </Text>
             </View>
-            <TouchableOpacity
-              onPress={() => router.push("/(tabs)/settings" as any)}
-              className={`w-12 h-12 rounded-[4px] border items-center justify-center ${t.iconBtn} ${t.border}`}
-            >
-              <Ionicons name="settings-outline" size={20} color={t.colors.subtext} />
-            </TouchableOpacity>
+
+            {/* Right side: Milestones ring button + Settings button */}
+            <View className="flex-row items-center gap-3">
+
+              {/* ── Milestones Circular Progress Button ────────────────── */}
+              <TouchableOpacity
+                onPress={() => router.push("/milestones" as any)}
+                className="w-11 h-11 items-center justify-center"
+                style={{ position: "relative" }}
+              >
+                <Svg
+                  width={RING_SIZE}
+                  height={RING_SIZE}
+                  style={{ position: "absolute", }}
+                >
+                  {/* Background track */}
+                  <Circle
+                    cx={RING_SIZE / 2}
+                    cy={RING_SIZE / 2}
+                    r={RADIUS}
+                    stroke={t.colors.border}
+                    strokeWidth={STROKE}
+                    fill="none"
+                  />
+                  {/* Progress arc */}
+                  <Circle
+                    cx={RING_SIZE / 2}
+                    cy={RING_SIZE / 2}
+                    r={RADIUS}
+                    stroke={t.colors.green}
+                    strokeWidth={STROKE}
+                    fill="none"
+                    strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
+                    strokeDashoffset={ringOffset}
+                    strokeLinecap="round"
+                    rotation="-90"
+                    origin={`${RING_SIZE / 2}, ${RING_SIZE / 2}`}
+                  />
+                </Svg>
+                <Ionicons name="flag-outline" size={16} color={t.colors.text} />
+              </TouchableOpacity>
+
+              {/* Settings button */}
+              <TouchableOpacity
+                onPress={() => router.push("/(tabs)/settings" as any)}
+                className={`w-11 h-11 rounded-[4px] border items-center justify-center ${t.iconBtn} ${t.border}`}
+              >
+                <Ionicons name="settings-outline" size={20} color={t.colors.subtext} />
+              </TouchableOpacity>
+            </View>
           </View>
 
-          {/* Hero card */}
+          {/* ── Hero card ───────────────────────────────────────────────── */}
           <View className={`${t.cardBg} border ${t.border} rounded-[4px] p-6 mb-8`}>
             <Text
               style={{ fontFamily: "Inter_700Bold", fontSize: 28, letterSpacing: -0.5 }}
@@ -221,7 +298,7 @@ export default function HomeScreen() {
               style={{ fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 22 }}
               className={`${t.textSubtle} mb-6`}
             >
-              Start your 25-minute deep work interval to maximize productivity today.
+              Pick a milestone and start your session.
             </Text>
 
             {/* Work day info */}
@@ -243,85 +320,259 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            {/* Daily Goals */}
+            {/* ── Milestone Selector ─────────────────────────────────── */}
+            <View className="mb-5">
+              <Text
+                style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 2 }}
+                className={`${t.textSubtle} uppercase mb-3`}
+              >
+                Select Milestone
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8 }}
+              >
+                {activeMilestones.length === 0 ? (
+                  <TouchableOpacity
+                    onPress={() => router.push("/milestones" as any)}
+                    className={`border ${t.border} rounded-[4px] px-4 py-3 items-center`}
+                    style={{ borderStyle: "dashed", backgroundColor: t.colors.bg, minWidth: 180 }}
+                  >
+                    <Ionicons name="flag-outline" size={16} color={t.colors.subtext} />
+                    <Text
+                      style={{
+                        fontFamily: "Inter_600SemiBold",
+                        fontSize: 11,
+                        letterSpacing: 1,
+                        color: t.colors.subtext,
+                        marginTop: 4,
+                      }}
+                    >
+                      Create a Milestone first
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  activeMilestones.map((milestone) => {
+                  const isSelected = selectedMilestoneId === milestone.id;
+                  const pending = milestone.tasks.filter(
+                    (tk) => tk.status !== "completed"
+                  ).length;
+                  const total = milestone.tasks.length;
+
+                  return (
+                    <TouchableOpacity
+                      key={milestone.id}
+                      onPress={() =>
+                        setSelectedMilestoneId(
+                          isSelected ? null : milestone.id
+                        )
+                      }
+                      style={{
+                        borderColor: isSelected
+                          ? t.colors.green
+                          : t.colors.border,
+                        backgroundColor: isSelected
+                          ? t.colors.greenLight
+                          : t.colors.bg,
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        minWidth: 130,
+                      }}
+                    >
+                      {/* Type badge */}
+                      <View className="flex-row items-center mb-1 gap-2">
+                        <View
+                          style={{
+                            backgroundColor: milestone.type === "target"
+                              ? t.colors.brown + "30"
+                              : t.colors.green + "25",
+                            borderRadius: 2,
+                            paddingHorizontal: 5,
+                            paddingVertical: 1,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontFamily: "Inter_600SemiBold",
+                              fontSize: 8,
+                              letterSpacing: 1,
+                              color: milestone.type === "target"
+                                ? t.colors.brown
+                                : t.colors.green,
+                            }}
+                          >
+                            {milestone.type === "target" ? "TARGET" : "HABIT"}
+                          </Text>
+                        </View>
+                        {milestone.deadline && (
+                          <Text
+                            style={{
+                              fontFamily: "Inter_400Regular",
+                              fontSize: 9,
+                              color: t.colors.subtext,
+                            }}
+                          >
+                            {milestone.deadline}
+                          </Text>
+                        )}
+                      </View>
+
+                      <Text
+                        style={{
+                          fontFamily: "Inter_600SemiBold",
+                          fontSize: 13,
+                          color: isSelected ? t.colors.text : t.colors.textDim,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {milestone.title}
+                      </Text>
+
+                      <Text
+                        style={{
+                          fontFamily: "Inter_400Regular",
+                          fontSize: 11,
+                          color: t.colors.subtext,
+                          marginTop: 3,
+                        }}
+                      >
+                        {pending}/{total} tasks left
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                  })
+                )}
+              </ScrollView>
+            </View>
+
+            {/* ── Session Tasks Preview ──────────────────────────────── */}
             <View className="mb-6">
-              <View className="flex-row justify-between items-center mb-4">
+              <View className="flex-row justify-between items-center mb-3">
                 <Text
                   style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 2 }}
                   className={`${t.textSubtle} uppercase`}
                 >
-                  Daily Goals
+                  Session Tasks
                 </Text>
-                <View className={`border ${t.border} rounded-[4px] px-2 py-1`}>
-                  <Text
-                    style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 1 }}
-                    className={t.textSubtle}
-                  >
-                    {tempGoals.length} TASKS
-                  </Text>
-                </View>
               </View>
 
-              {/* Goal input */}
-              <View className="flex-row mb-3">
-                <TextInput
-                  style={{
-                    fontFamily: "Inter_400Regular",
-                    fontSize: 14,
-                    borderColor: goalInputFocused ? "#6B8E6F" : t.colors.border,
-                    borderWidth: 1,
-                  }}
-                  className={`flex-1 ${t.inputBg} rounded-[4px] px-4 py-3 mr-2`}
-                  placeholder="Add a goal for today…"
-                  placeholderTextColor={t.colors.subtext}
-                  value={newGoal}
-                  onChangeText={setNewGoal}
-                  onSubmitEditing={addTempGoal}
-                  onFocus={() => setGoalInputFocused(true)}
-                  onBlur={() => setGoalInputFocused(false)}
-                />
-                <TouchableOpacity
-                  onPress={addTempGoal}
-                  className={`w-12 h-12 rounded-[4px] items-center justify-center ${t.cardHighBg} border ${t.border}`}
-                >
-                  <Ionicons name="add" size={22} color={t.colors.text} />
-                </TouchableOpacity>
-              </View>
-
-              {/* Goal list */}
-              {tempGoals.map((goal, index) => (
+              {!selectedMilestone ? (
                 <View
-                  key={index}
-                  className={`${t.inputBg} border ${t.border} rounded-[4px] p-4 mb-2 flex-row justify-between items-center`}
+                  className={`${t.inputBg} border ${t.border} rounded-[4px] p-4 items-center`}
+                  style={{ borderStyle: "dashed" }}
                 >
+                  <Ionicons name="layers-outline" size={20} color={t.colors.border} />
                   <Text
-                    style={{ fontFamily: "Inter_400Regular", fontSize: 14 }}
-                    className={`${t.textDim} flex-1 mr-2`}
+                    style={{
+                      fontFamily: "Inter_400Regular",
+                      fontSize: 13,
+                      color: t.colors.subtext,
+                      marginTop: 6,
+                      textAlign: "center",
+                    }}
                   >
-                    {goal}
+                    Select a milestone above to load session tasks
                   </Text>
-                  <TouchableOpacity
-                    onPress={() =>
-                      setTempGoals(tempGoals.filter((_, i) => i !== index))
-                    }
-                  >
-                    <Ionicons name="close" size={18} color={t.colors.subtext} />
-                  </TouchableOpacity>
                 </View>
-              ))}
+              ) : (
+                <View className={`${t.inputBg} border ${t.border} rounded-[4px] overflow-hidden`}>
+                  {sessionPreviewTasks.slice(0, 4).map((task, idx) => (
+                    <View
+                      key={task.id}
+                      className="flex-row items-center px-4 py-3"
+                      style={{
+                        borderTopWidth: idx === 0 ? 0 : 1,
+                        borderTopColor: t.colors.border,
+                      }}
+                    >
+                      {task.status === "carried" && (
+                        <View
+                          style={{
+                            backgroundColor: t.colors.brown + "22",
+                            borderRadius: 2,
+                            paddingHorizontal: 5,
+                            paddingVertical: 2,
+                            marginRight: 8,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontFamily: "Inter_600SemiBold",
+                              fontSize: 8,
+                              letterSpacing: 1,
+                              color: t.colors.brown,
+                            }}
+                          >
+                            CARRIED
+                          </Text>
+                        </View>
+                      )}
+                      <Text
+                        style={{
+                          fontFamily: "Inter_400Regular",
+                          fontSize: 13,
+                          color: t.colors.textDim,
+                          flex: 1,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {task.text}
+                      </Text>
+                    </View>
+                  ))}
+                  {sessionPreviewTasks.length > 4 && (
+                    <View
+                      className="px-4 py-2"
+                      style={{
+                        borderTopWidth: 1,
+                        borderTopColor: t.colors.border,
+                        backgroundColor: t.colors.card,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontFamily: "Inter_600SemiBold",
+                          fontSize: 10,
+                          letterSpacing: 1,
+                          color: t.colors.subtext,
+                        }}
+                      >
+                        +{sessionPreviewTasks.length - 4} MORE TASKS
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
             </View>
 
-            {/* Initialize Session button */}
+            {/* ── Initialize Session button ──────────────────────────── */}
             <TouchableOpacity
               onPress={handleStart}
               className="rounded-[4px] p-4 items-center"
-              style={{ backgroundColor: t.colors.text }}
+              style={{
+                backgroundColor: selectedMilestone
+                  ? t.colors.text
+                  : t.isDark ? "rgba(255,255,255,0.1)" : "#D9D5CE",
+              }}
+              disabled={!selectedMilestone}
             >
               <Text
-                style={{ fontFamily: "Inter_700Bold", fontSize: 13, letterSpacing: 1.5, color: t.isDark ? '#0D0B1F' : '#FAFAF8' }}
+                style={{
+                  fontFamily: "Inter_700Bold",
+                  fontSize: 13,
+                  letterSpacing: 1.5,
+                  color: selectedMilestone
+                    ? (t.isDark ? "#0D0B1F" : "#FAFAF8")
+                    : t.colors.subtext,
+                }}
                 className="uppercase"
               >
-                Initialize Session
+                {selectedMilestone
+                  ? `Start — ${selectedMilestone.title}`
+                  : "Select a Milestone First"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -333,10 +584,12 @@ export default function HomeScreen() {
   }
 
   // ─── Active session view ───────────────────────────────────────────────────
+  const activeMilestone = milestones.find((m) => m.id === useSessionStore.getState().activeMilestoneId) ?? null;
+
   return (
     <View className={`flex-1 ${t.bg} pt-14 px-6`}>
       {/* Header */}
-      <View className="flex-row justify-between items-center mb-8">
+      <View className="flex-row justify-between items-center mb-2">
         <Text
           style={{ fontFamily: "Inter_700Bold", fontSize: 20 }}
           className={t.textPrimary}
@@ -352,6 +605,33 @@ export default function HomeScreen() {
           </Text>
         </View>
       </View>
+
+      {/* Milestone label */}
+      {activeMilestone && (
+        <View className="flex-row items-center mb-6">
+          <View
+            style={{
+              backgroundColor:
+                activeMilestone.type === "target" ? t.colors.brown + "22" : t.colors.green + "20",
+              borderRadius: 2,
+              paddingHorizontal: 7,
+              paddingVertical: 3,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: "Inter_600SemiBold",
+                fontSize: 9,
+                letterSpacing: 1.5,
+                color: activeMilestone.type === "target" ? t.colors.brown : t.colors.green,
+              }}
+            >
+              {activeMilestone.type === "target" ? "TARGET" : "HABIT"}  ·  {activeMilestone.title.toUpperCase()}
+            </Text>
+          </View>
+        </View>
+      )}
+
 
       {/* Timer */}
       <View className={`${t.cardBg} border ${t.border} rounded-[4px] p-8 mb-6 items-center`}>
@@ -420,7 +700,7 @@ export default function HomeScreen() {
             style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 2 }}
             className={`${t.textSubtle} uppercase`}
           >
-            Today&apos;s Goals
+            Session Tasks
           </Text>
           <Text
             style={{ fontFamily: "Inter_600SemiBold", fontSize: 10 }}
@@ -452,7 +732,14 @@ export default function HomeScreen() {
               <GHTouchableOpacity
                 activeOpacity={0.7}
                 disabled={isDragging}
-                onPress={() => toggleGoal(goal.id)}
+                onPress={() => {
+                  if (!goal.completed) {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  } else {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  toggleGoal(goal.id);
+                }}
                 containerStyle={{ flex: 1 }}
                 style={{ flexDirection: "row", alignItems: "center" }}
               >

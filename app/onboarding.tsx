@@ -1,4 +1,5 @@
 import { useSettingsStore } from '@/store/settingsStore';
+import { requestPermissions } from '@/services/notifications';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
@@ -39,6 +40,12 @@ const SLIDES = [
   },
   {
     id: '4',
+    title: 'Smart Notifications',
+    description: 'Enable notifications to get smart reminders when your focus timer is left running, and daily gentle nudges.',
+    icon: 'notifications' as const,
+  },
+  {
+    id: '5',
     title: 'Powered by Gemini',
     description: 'Paste your free API key to unlock the AI.',
     icon: 'sparkles' as const,
@@ -86,7 +93,8 @@ export default function OnboardingScreen() {
 
   // ── Slide renderer ────────────────────────────────────────────────────────
   const renderItem = ({ item, index }: { item: (typeof SLIDES)[0]; index: number }) => {
-    const isApiSlide = index === 3;
+    const isApiSlide = index === 4;
+    const isNotifSlide = index === 3;
 
     const content = (
       <>
@@ -226,6 +234,42 @@ export default function OnboardingScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* Notifications slide extras */}
+        {isNotifSlide && (
+          <TouchableOpacity
+            onPress={async () => {
+              const granted = await requestPermissions();
+              if (granted) {
+                handleNext();
+              }
+            }}
+            style={{
+              backgroundColor: C.text,
+              borderRadius: 4,
+              paddingHorizontal: 28,
+              paddingVertical: 14,
+              marginBottom: 24,
+              alignSelf: 'center',
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: 'Inter_700Bold',
+                fontSize: 13,
+                letterSpacing: 1.5,
+                color: C.bg,
+                marginRight: 8,
+                textTransform: 'uppercase',
+              }}
+            >
+              Enable Notifications
+            </Text>
+            <Ionicons name="notifications-outline" size={16} color={C.bg} />
+          </TouchableOpacity>
         )}
       </>
     );

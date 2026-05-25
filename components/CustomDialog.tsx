@@ -42,7 +42,11 @@ export default function CustomDialog() {
           easing: Easing.in(Easing.ease),
           useNativeDriver: true,
         }),
-      ]).start(() => setIsRendered(false));
+      ]).start(({ finished }) => {
+        if (finished) {
+          setIsRendered(false);
+        }
+      });
     }
   }, [isVisible, fadeAnim, scaleAnim]);
 
