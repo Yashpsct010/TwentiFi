@@ -21,11 +21,10 @@ export default function WisdomPulse() {
     }
   }, [geminiApiKey, hasQuoteForToday, setQuote]);
 
-  // Construct Pollinations image URL based on keyword
-  // Adding descriptive modifiers for a premium, moody aesthetic
-  const prompt = `${keyword}, moody, atmospheric photography, high-end editorial`;
-  const encodedPrompt = encodeURIComponent(prompt);
-  const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=800&height=600&nologo=true`;
+  // Construct a reliable abstract image URL based on keyword using Picsum
+  // Adding blur for a premium, moody aesthetic that ensures text legibility
+  const encodedKeyword = encodeURIComponent(keyword || "focus");
+  const imageUrl = `https://picsum.photos/seed/${encodedKeyword}/800/600?blur=4`;
 
   return (
     <View className="mt-8 mb-4">

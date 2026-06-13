@@ -40,7 +40,7 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
       <Video
         source={require('../assets/images/loadinglogo.mp4')}
         style={StyleSheet.absoluteFill}
-        resizeMode={ResizeMode.COVER}
+        resizeMode={ResizeMode.CONTAIN}
         shouldPlay
         isLooping={false}
         onPlaybackStatusUpdate={onPlaybackStatusUpdate}

@@ -43,8 +43,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/logo-primary-stacked.png",
-          "imageWidth": 200,
+          "image": "./assets/images/transparent-splash.png",
+          "imageWidth": 100,
           "resizeMode": "contain",
           "backgroundColor": "#f4f1eb",
           "dark": {
