@@ -1,5 +1,9 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, Calendar, Download, Mic, Sparkles, Timer, User } from 'lucide-react';
+import logoHorizontal from '../../assets/images/logo-secondary-horizontal.png';
+import logoBadge from '../../assets/images/logo-circular-badge.png';
+import iconLight from '../../assets/images/icon-light.png';
+import introVideo from '../../assets/images/appintrologoforwebsite.mp4';
 
 const FadeIn = ({ children, delay = 0, className = '' }) => (
   <motion.div
@@ -36,13 +40,10 @@ export default function App() {
     <div className="min-h-screen bg-background text-on-surface overflow-x-hidden selection:bg-primary/30">
 
       {/* Navbar Minimal */}
-      <nav className="fixed top-0 inset-x-0 z-50 h-24 flex items-center">
+      <nav className="fixed top-0 inset-x-0 z-50 h-24 flex items-center bg-background/80 backdrop-blur-md border-b border-outline-variant/10">
         <div className="container mx-auto px-6 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary-gradient flex items-center justify-center shadow-[0_0_15px_rgba(186,158,255,0.3)]">
-              <span className="font-display font-black text-on-primary text-xl tracking-tighter">T</span>
-            </div>
-            <span className="font-display font-extrabold text-xl tracking-wide">TwentiFi</span>
+          <div className="flex items-center">
+            <img src={logoHorizontal} alt="TwentiFi" className="h-10 w-auto brightness-0 invert opacity-90" />
           </div>
           <motion.a
             href="https://github.com/Yashpsct010/TwentiFi/releases/latest/download/twentifi.apk"
@@ -105,13 +106,23 @@ export default function App() {
 
       {/* Layered Interface Mockup Illusion */}
       <section className="px-6 pb-32">
-        <FadeIn className="container mx-auto max-w-6xl">
-          <div className="w-full h-[400px] md:h-[600px] glass-panel rounded-[40px] relative overflow-hidden flex items-center justify-center border-t border-l border-white/10">
+        <FadeIn className="container mx-auto max-w-5xl">
+          <div className="w-full py-12 md:py-16 glass-panel rounded-[40px] relative overflow-hidden flex items-center justify-center border-t border-l border-white/10">
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 mix-blend-overlay" />
             <div className="w-64 h-64 bg-secondary/20 rounded-full blur-[80px] absolute top-1/2 left-1/4" />
             <div className="w-48 h-48 bg-primary/20 rounded-full blur-[60px] absolute bottom-1/4 right-1/4" />
 
-            <div className="relative z-10 text-center px-4">
+            <div className="relative z-10 text-center px-4 w-full flex flex-col items-center">
+              <div className="w-full max-w-lg md:max-w-xl rounded-[24px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 mb-8">
+                <video 
+                  src={introVideo}
+                  autoPlay 
+                  loop 
+                  muted 
+                  playsInline
+                  className="w-full h-auto object-cover"
+                />
+              </div>
               <h2 className="font-display font-black text-3xl md:text-5xl tracking-tight mb-4">Focus. Log. <span className="text-primary">Evolve.</span></h2>
               <p className="text-on-surface-variant font-medium">Experience the dark mode interface built for extreme focus.</p>
             </div>

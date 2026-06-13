@@ -5,7 +5,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import '../global.css';
 import * as Notifications from 'expo-notifications';
-import React from 'react';
+import * as SplashScreen from 'expo-splash-screen';
+import React, { useState } from 'react';
 import { initDB } from '@/services/database';
 import { useLogStore } from '@/store/logStore';
 import { useSessionStore } from '@/store/sessionStore';
@@ -21,6 +22,10 @@ import {
 import { useSettingsStore } from '@/store/settingsStore';
 import { useMilestoneStore } from '@/store/milestoneStore';
 import CustomDialog from '@/components/CustomDialog';
+import AnimatedSplashScreen from '@/components/AnimatedSplashScreen';
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 // Configure how notifications are handled when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -39,6 +44,7 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const { hasCompletedOnboarding, theme } = useSettingsStore();
+  const [isSplashVisible, setIsSplashVisible] = useState(true);
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -119,6 +125,7 @@ export default function RootLayout() {
         </Stack>
         <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
         <CustomDialog />
+        {isSplashVisible && <AnimatedSplashScreen onAnimationComplete={() => setIsSplashVisible(false)} />}
       </ThemeProvider>
     </GestureHandlerRootView>
   );

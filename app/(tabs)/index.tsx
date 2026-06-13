@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { useDialogStore } from "@/store/dialogStore";
 import { TouchableOpacity as GHTouchableOpacity } from "react-native-gesture-handler";
@@ -588,14 +589,11 @@ export default function HomeScreen() {
 
   return (
     <View className={`flex-1 ${t.bg} pt-14 px-6`}>
-      {/* Header */}
       <View className="flex-row justify-between items-center mb-2">
-        <Text
-          style={{ fontFamily: "Inter_700Bold", fontSize: 20 }}
-          className={t.textPrimary}
-        >
-          TwentiFi
-        </Text>
+        <Image 
+          source={require('../../assets/images/logo-secondary-horizontal.png')}
+          style={{ height: 28, width: 120, resizeMode: 'contain', tintColor: t.isDark ? '#E2E2E2' : '#1A1A1A' }}
+        />
         <View className={`border ${t.border} rounded-[4px] px-3 py-1`}>
           <Text
             style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 1.5 }}
