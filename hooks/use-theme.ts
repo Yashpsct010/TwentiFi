@@ -49,17 +49,17 @@ export function useTheme() {
 
     // Raw hex values (for components that need inline style or Ionicons color)
     colors: {
-      bg: isDark ? '#0D0B1F' : '#FAFAF8',
-      card: isDark ? '#1C1B33' : '#F5F1EB',
-      text: isDark ? '#FFFFFF' : '#1A1A1A',
-      textDim: isDark ? '#E2E2E2' : '#39382F',
-      subtext: isDark ? '#9CA3AF' : '#66655A',
-      border: isDark ? 'rgba(255,255,255,0.08)' : '#D9D5CE',
-      accent: isDark ? '#8B5CF6' : '#1A1A1A',
+      bg: isDark ? '#1a1a1a' : '#FAFAF8',
+      card: isDark ? '#242424' : '#F5F1EB',
+      text: isDark ? '#f4f1eb' : '#1A1A1A',
+      textDim: isDark ? '#d4c3b3' : '#39382F',
+      subtext: isDark ? '#8c8c8c' : '#66655A',
+      border: isDark ? 'rgba(255,255,255,0.1)' : '#D9D5CE',
+      accent: isDark ? '#d4c3b3' : '#1A1A1A',
       green: '#6B8E6F',
       greenLight: isDark ? 'rgba(107,142,111,0.20)' : '#C6ECC8',
       brown: '#9B7D6A',
-      error: isDark ? '#FF6B6B' : '#A64542',
+      error: isDark ? '#A64542' : '#A64542',
     },
   };
 }

@@ -29,16 +29,16 @@ module.exports = {
         },
         // ── Dark Mode ─────────────────────────────────────────────
         dark: {
-          bg:      '#0D0B1F',
-          card:    '#1C1B33',
-          cardHigh: '#252442',
-          text:    '#FFFFFF',
-          textDim: '#E2E2E2',
-          subtext: '#9CA3AF',
-          accent:  '#8B5CF6',
+          bg:      '#1a1a1a',
+          card:    '#242424',
+          cardHigh: '#2a2a2a',
+          text:    '#f4f1eb',
+          textDim: '#d4c3b3',
+          subtext: '#8c8c8c',
+          accent:  '#d4c3b3',
           green:   '#6B8E6F',
-          border:  'rgba(255,255,255,0.08)',
-          error:   '#FF6B6B',
+          border:  'rgba(255,255,255,0.1)',
+          error:   '#A64542',
         },
         // ── Legacy (kept so existing code doesn't break) ──────────
         brand: {

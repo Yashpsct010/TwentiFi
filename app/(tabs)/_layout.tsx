@@ -13,10 +13,10 @@ export default function TabLayout() {
   const height = 56 + paddingBottom;
 
   // Vellum Ledger tab bar tokens
-  const tabBarBg = isDark ? "#0D0B1F" : "#FAFAF8";
-  const activeColor = isDark ? "#8B5CF6" : "#1A1A1A";
-  const inactiveColor = isDark ? "#6B6882" : "#B0ABA4";  // dimmer = more contrast vs active
-  const borderColor = isDark ? "rgba(255,255,255,0.08)" : "#D9D5CE";
+  const tabBarBg = isDark ? "#1a1a1a" : "#FAFAF8";
+  const activeColor = isDark ? "#d4c3b3" : "#1A1A1A";
+  const inactiveColor = isDark ? "#8c8c8c" : "#B0ABA4";  // dimmer = more contrast vs active
+  const borderColor = isDark ? "rgba(255,255,255,0.1)" : "#D9D5CE";
 
   return (
     <Tabs

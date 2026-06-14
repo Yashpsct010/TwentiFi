@@ -36,10 +36,10 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
   });
 
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#1E1E1E', zIndex: 9999 }, animatedStyle]}>
+    <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#242426', zIndex: 9999, justifyContent: 'center', alignItems: 'center' }, animatedStyle]}>
       <Video
         source={require('../assets/images/loadinglogo.mp4')}
-        style={StyleSheet.absoluteFill}
+        style={{ width: 200, height: 200, borderRadius: 32, overflow: 'hidden' }}
         resizeMode={ResizeMode.CONTAIN}
         shouldPlay
         isLooping={false}
