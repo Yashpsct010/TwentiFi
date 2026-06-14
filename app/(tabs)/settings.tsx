@@ -1,6 +1,7 @@
 import { useLogStore } from "@/store/logStore";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
+import { useInsightStore } from "@/store/insightStore";
 import { useTheme } from "@/hooks/use-theme";
 import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system";
@@ -46,6 +47,7 @@ export default function SettingsScreen() {
   } = useSettingsStore();
   const { logs, clearLogs } = useLogStore();
   const { endSession } = useSessionStore();
+  const { clearInsights } = useInsightStore();
   const t = useTheme();
 
   const [localInterval, setLocalInterval] = React.useState(String(loggingInterval));
@@ -149,6 +151,7 @@ export default function SettingsScreen() {
       if (confirmed) {
         await clearLogs();
         await endSession();
+        clearInsights();
         window.alert("All logs and active sessions have been cleared.");
       }
     } else {
@@ -163,6 +166,7 @@ export default function SettingsScreen() {
             onPress: async () => {
               await clearLogs();
               await endSession();
+              clearInsights();
               useDialogStore.getState().showDialog("Data Purged", "All logs and active sessions have been cleared.");
             },
           },
