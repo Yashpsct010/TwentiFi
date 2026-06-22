@@ -9,12 +9,12 @@
 TwentiFi is built using a modern, reactive, and mobile-first ecosystem.
 
 - **Framework**: [Expo (React Native)](https://expo.dev/) driven by Expo Router for file-based navigation.
-- **UI & Styling**: [NativeWind v4](https://www.nativewind.dev/) (Tailwind CSS for React Native) paired with React Native Reanimated for smooth micro-interactions.
-- **State Management**: [Zustand](https://github.com/pmndrs/zustand) for lightweight, fast global state, persisted via AsyncStorage.
+- **UI & Styling**: [NativeWind v4](https://www.nativewind.dev/) (Tailwind CSS for React Native) paired with React Native Reanimated for smooth micro-interactions, an animated video splash screen, and the theme-aware "Vellum Ledger" aesthetic.
+- **State Management**: [Zustand](https://github.com/pmndrs/zustand) for lightweight, fast global state (featuring specialized stores for Logs, Sessions, Milestones, Insights, Dialogs, Groups, Quotes, and Settings), persisted via AsyncStorage.
 - **Local Database**: [Expo SQLite](https://docs.expo.dev/versions/latest/sdk/sqlite/) for high-performance, on-device data storage.
 - **AI Processing**: Google Gemini (via `@react-native-firebase/vertexai` & REST API) for voice transcription and behavioral analysis.
-- **Hardware Integrations**: Expo Notifications (for the 20-minute pulses), Expo Audio, and Expo Speech Recognition.
-- **Promotional Website**: A Vite + React web application located in the `website/` directory to serve as a landing page.
+- **Hardware Integrations**: Expo Notifications (smart alerts for the 20-minute pulses), Expo Audio, Expo Speech Recognition, and Expo Haptics.
+- **Promotional Website**: A Vite + React web application located in the `website/` directory featuring a dynamic hero video to serve as a landing page.
 
 ---
 
@@ -41,10 +41,10 @@ All user data lives entirely on their mobile device within these core relational
 The UX is designed around frictionless habit formation. **Logging must take less than 5 seconds.**
 
 1. **Morning Setup (Session Start)**
-   - The user opens the app, defines their active hours (e.g., 9 AM to 5 PM), and sets top goals for the day.
+   - The user opens the app, defines their active hours (e.g., 9 AM to 5 PM), sets top goals for the day, and can utilize milestone templates. They are greeted by a `WisdomPulse` daily quote to set a productive tone.
    
 2. **The 20-Minute Pulse (Notification Trigger)**
-   - A local, scheduled background notification fires precisely every 20 minutes from the session start time.
+   - A local, scheduled smart background notification fires precisely every 20 minutes from the session start time, accompanied by haptic feedback.
 
 3. **The 5-Second Response Window**
    - The user taps the notification and enters the quick-log UI. They speak or type a quick blurb (e.g., "Debugging the API endpoint"). 
@@ -54,7 +54,7 @@ The UX is designed around frictionless habit formation. **Logging must take less
    - The input is saved to SQLite, categorized by mood (🔥 Deep Work, 😐 Neutral, 😫 Exhausted), and appended to the beautiful Daily Timeline view.
 
 5. **End of Day Insights**
-   - The app aggregates the 20-minute blocks, calculates a daily productivity score, updates the continuous Leetcode-style activity streak, and provides AI-driven coaching based on the day's cadence.
+   - The app aggregates the 20-minute blocks, calculates a daily productivity score, updates the continuous Leetcode-style activity Streak Calendar, and provides AI-driven coaching (Historical Insights) based on the day's cadence.
 
 ---
 

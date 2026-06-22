@@ -10,12 +10,13 @@ TwentiFi is a mobile-first lifestyle companion designed to capture the "reality 
 Most apps focus on the future (calendars/todos). TwentiFi focuses on the **present**. By prompting you every 20 minutes, it builds a high-resolution timeline of your life, usage patterns, and productivity levels, then uses the Gemini AI to coach you into a better version of yourself.
 
 ## ✨ Key Features
-- **The 20-Minute Pulse**: Integrated notification system that prompts you autonomously.
+- **Vellum Ledger Aesthetic**: A gorgeous, theme-aware brand overhaul with an animated video splash screen.
+- **The 20-Minute Pulse**: Integrated smart notification system with haptic feedback that prompts you autonomously.
 - **5-Second Logging**: Optimized UI for near-instant logging via voice or text.
 - **Voice AI Transcription**: Powered natively by **Gemini 3.1 Flash-Lite** for perfect context-aware speech-to-text.
-- **Gen-Z AI Insights**: Deeply personalized productivity feedback and push notification generation.
-- **Interactive Streak Calendar**: Visualize your 6-month consistency in a gorgeous Leetcode-style activity grid.
-- **Promotional Website**: A beautiful glassmorphism landing page located in `website/` with automated APK GitHub Action build workflows.
+- **WisdomPulse & Insights**: Deeply personalized productivity feedback, daily quotes, and push notification generation.
+- **Interactive Streak Calendar**: Visualize your 6-month consistency in a gorgeous Leetcode-style activity grid alongside Milestone templates.
+- **Promotional Website**: A beautiful glassmorphism landing page located in `website/` with a dynamic hero video and automated APK GitHub Action build workflows.
 - **Local-First Privacy**: Your logs live in a high-performance **SQLite** database on your device.
 
 ## 🛠 Tech Stack
@@ -63,9 +64,9 @@ npm run dev
 ```text
 app/          # Expo Router pages (Tabs & Modals, with Onboarding)
 assets/       # Images and splash screens
-components/   # Reusable UI components (StreakCalendar, etc.)
+components/   # Reusable UI components (StreakCalendar, WisdomPulse, HistoricalInsightsCard, etc.)
 services/     # SQLite, Gemini REST APIs, and Notification logic
-store/        # Zustand stores for logs, user settings, and sessions
+store/        # Zustand stores for logs, user settings, sessions, insights, milestones, quotes, etc.
 website/      # React Vite promotional website
 ```
 

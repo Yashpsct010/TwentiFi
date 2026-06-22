@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import * as SplashScreen from 'expo-splash-screen';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
+
+const AnimatedVideo = Animated.createAnimatedComponent(Video);
 
 type Props = {
   onAnimationComplete: () => void;
@@ -22,7 +24,7 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
       
       // When video finishes playing, fade out
       if (status.didJustFinish) {
-        opacity.value = withTiming(0, { duration: 600 }, () => {
+        opacity.value = withTiming(0, { duration: 300 }, () => {
           runOnJS(onAnimationComplete)();
         });
       }
@@ -36,16 +38,18 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
   });
 
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#242426', zIndex: 9999, justifyContent: 'center', alignItems: 'center' }, animatedStyle]}>
-      <Video
+    <View style={[StyleSheet.absoluteFill, { zIndex: 9999, justifyContent: 'center', alignItems: 'center' }]}>
+      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#242426' }, animatedStyle]} />
+      <AnimatedVideo
         source={require('../assets/images/loadinglogo.mp4')}
-        style={{ width: 200, height: 200, borderRadius: 32, overflow: 'hidden' }}
+        style={[{ width: 200, height: 200, borderRadius: 32, overflow: 'hidden', position: 'absolute' }, animatedStyle]}
         resizeMode={ResizeMode.CONTAIN}
         shouldPlay
         isLooping={false}
         onPlaybackStatusUpdate={onPlaybackStatusUpdate}
         isMuted
+        rate={2.0}
       />
-    </Animated.View>
+    </View>
   );
 }

@@ -220,20 +220,26 @@ export default function HomeScreen() {
           contentContainerStyle={{ paddingTop: 56, paddingBottom: 40, paddingHorizontal: 24 }}
         >
           {/* ── Header ─────────────────────────────────────────────────── */}
-          <View className="flex-row justify-between items-center mb-10">
+          <View className="flex-row justify-between items-start mb-10">
             <View>
               <Text
-                style={{ fontFamily: "Inter_400Regular", fontSize: 11, letterSpacing: 2 }}
-                className={`${t.textSubtle} uppercase`}
+                style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 1.5 }}
+                className={`${t.textSubtle} uppercase mb-1`}
               >
-                Welcome back
+                Welcome Back
               </Text>
               <Text
-                style={{ fontFamily: "Inter_700Bold", fontSize: 24 }}
-                className={t.textPrimary}
+                style={{ fontFamily: "Inter_700Bold", fontSize: 24, letterSpacing: -0.5 }}
+                className={`${t.textPrimary} mb-2`}
               >
                 {userName}
               </Text>
+              <View className="flex-row items-center">
+                <Ionicons name="time-outline" size={14} color={t.colors.subtext} />
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12 }} className={`${t.textSubtle} ml-2`}>
+                  {startOfDay} — {endOfDay}
+                </Text>
+              </View>
             </View>
 
             {/* Right side: Milestones ring button + Settings button */}
@@ -288,47 +294,24 @@ export default function HomeScreen() {
           </View>
 
           {/* ── Hero card ───────────────────────────────────────────────── */}
-          <View className={`${t.cardBg} border ${t.border} rounded-[4px] p-6 mb-8`}>
-            <Text
-              style={{ fontFamily: "Inter_700Bold", fontSize: 28, letterSpacing: -0.5 }}
-              className={`${t.textPrimary} mb-1`}
-            >
-              Ready to Focus?
-            </Text>
-            <Text
-              style={{ fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 22 }}
-              className={`${t.textSubtle} mb-6`}
-            >
-              Pick a milestone and start your session.
-            </Text>
-
-            {/* Work day info */}
-            <View className={`flex-row items-center ${t.inputBg} border ${t.border} rounded-[4px] p-4 mb-6`}>
-              <Ionicons name="time-outline" size={16} color={t.colors.subtext} />
-              <View className="ml-3">
-                <Text
-                  style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 1.5 }}
-                  className={`${t.textSubtle} uppercase`}
-                >
-                  Defined Work Day
-                </Text>
-                <Text
-                  style={{ fontFamily: "Inter_600SemiBold", fontSize: 14 }}
-                  className={t.textPrimary}
-                >
-                  {startOfDay} — {endOfDay}
-                </Text>
+          <View className={`${t.cardBg} border ${t.border} rounded-[6px] p-4 mb-6`}>
+            <View className="flex-row items-center justify-between mb-4">
+              <Text
+                style={{ fontFamily: "Inter_600SemiBold", fontSize: 18 }}
+                className={t.textPrimary}
+              >
+                Focus Session
+              </Text>
+              <View className="flex-row items-center">
+                 <Ionicons name="calendar-outline" size={12} color={t.colors.subtext} />
+                 <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 9, letterSpacing: 1 }} className={`${t.textSubtle} uppercase ml-1`}>
+                   TODAY • {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase()}
+                 </Text>
               </View>
             </View>
 
             {/* ── Milestone Selector ─────────────────────────────────── */}
-            <View className="mb-5">
-              <Text
-                style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 2 }}
-                className={`${t.textSubtle} uppercase mb-3`}
-              >
-                Select Milestone
-              </Text>
+            <View className="mb-4">
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -378,9 +361,9 @@ export default function HomeScreen() {
                           : t.colors.bg,
                         borderWidth: 1,
                         borderRadius: 4,
-                        paddingHorizontal: 14,
-                        paddingVertical: 10,
-                        minWidth: 130,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        minWidth: 120,
                       }}
                     >
                       {/* Type badge */}
@@ -450,10 +433,10 @@ export default function HomeScreen() {
             </View>
 
             {/* ── Session Tasks Preview ──────────────────────────────── */}
-            <View className="mb-6">
-              <View className="flex-row justify-between items-center mb-3">
+            <View className="mb-5">
+              <View className="flex-row justify-between items-center mb-2">
                 <Text
-                  style={{ fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 2 }}
+                  style={{ fontFamily: "Inter_600SemiBold", fontSize: 9, letterSpacing: 1.5 }}
                   className={`${t.textSubtle} uppercase`}
                 >
                   Session Tasks
@@ -462,28 +445,27 @@ export default function HomeScreen() {
 
               {!selectedMilestone ? (
                 <View
-                  className={`${t.inputBg} border ${t.border} rounded-[4px] p-4 items-center`}
+                  className={`${t.inputBg} border ${t.border} rounded-[4px] p-3 items-center flex-row justify-center`}
                   style={{ borderStyle: "dashed" }}
                 >
-                  <Ionicons name="layers-outline" size={20} color={t.colors.border} />
+                  <Ionicons name="layers-outline" size={14} color={t.colors.border} />
                   <Text
                     style={{
                       fontFamily: "Inter_400Regular",
-                      fontSize: 13,
+                      fontSize: 12,
                       color: t.colors.subtext,
-                      marginTop: 6,
-                      textAlign: "center",
+                      marginLeft: 6,
                     }}
                   >
-                    Select a milestone above to load session tasks
+                    Select a milestone to load tasks
                   </Text>
                 </View>
               ) : (
                 <View className={`${t.inputBg} border ${t.border} rounded-[4px] overflow-hidden`}>
-                  {sessionPreviewTasks.slice(0, 4).map((task, idx) => (
+                  {sessionPreviewTasks.slice(0, 2).map((task, idx) => (
                     <View
                       key={task.id}
-                      className="flex-row items-center px-4 py-3"
+                      className="flex-row items-center px-3 py-2"
                       style={{
                         borderTopWidth: idx === 0 ? 0 : 1,
                         borderTopColor: t.colors.border,
@@ -524,9 +506,9 @@ export default function HomeScreen() {
                       </Text>
                     </View>
                   ))}
-                  {sessionPreviewTasks.length > 4 && (
+                  {sessionPreviewTasks.length > 2 && (
                     <View
-                      className="px-4 py-2"
+                      className="px-3 py-1.5"
                       style={{
                         borderTopWidth: 1,
                         borderTopColor: t.colors.border,
@@ -536,12 +518,12 @@ export default function HomeScreen() {
                       <Text
                         style={{
                           fontFamily: "Inter_600SemiBold",
-                          fontSize: 10,
+                          fontSize: 9,
                           letterSpacing: 1,
                           color: t.colors.subtext,
                         }}
                       >
-                        +{sessionPreviewTasks.length - 4} MORE TASKS
+                        +{sessionPreviewTasks.length - 2} MORE TASKS
                       </Text>
                     </View>
                   )}
@@ -552,7 +534,7 @@ export default function HomeScreen() {
             {/* ── Initialize Session button ──────────────────────────── */}
             <TouchableOpacity
               onPress={handleStart}
-              className="rounded-[4px] p-4 items-center"
+              className="rounded-[4px] p-3 items-center"
               style={{
                 backgroundColor: selectedMilestone
                   ? t.colors.text
@@ -572,7 +554,7 @@ export default function HomeScreen() {
                 className="uppercase"
               >
                 {selectedMilestone
-                  ? `Start — ${selectedMilestone.title}`
+                  ? "Start Session"
                   : "Select a Milestone First"}
               </Text>
             </TouchableOpacity>

@@ -131,9 +131,9 @@ export const generateAIInsights = async (
   `;
 
   try {
-    const responseText = await callGemini(prompt, apiKey, "gemini-3.0-flash").catch(async (e) => {
-      console.log(`[Gemini] gemini-3.0-flash failed in generateAIInsights (${e.message}). Falling back to gemini-2.5-flash.`);
-      return await callGemini(prompt, apiKey, "gemini-2.5-flash");
+    const responseText = await callGemini(prompt, apiKey, "gemini-3.1-flash-lite").catch(async (e) => {
+      console.log(`[Gemini] gemini-3.1-flash-lite failed in generateAIInsights (${e.message}). Falling back to gemini-2.5-flash-lite.`);
+      return await callGemini(prompt, apiKey, "gemini-2.5-flash-lite");
     });
     return extractJSON(responseText);
   } catch {
@@ -283,7 +283,7 @@ export const expandTaskWithGemini = async (
   `;
 
   try {
-    const responseText = await callGemini(prompt, apiKey, "gemini-2.5-flash");
+    const responseText = await callGemini(prompt, apiKey, "gemini-2.5-flash-lite");
     const parsed = extractJSON(responseText);
 
     if (Array.isArray(parsed) && parsed.length > 0) {
@@ -306,14 +306,14 @@ export const generateDailyQuote = async (apiKey: string): Promise<{ quote: strin
 
   const prompt = `
     Generate a rare, highly insightful quote about focus, productivity, or discipline. 
-    It should NOT be a common cliché. 
+    It should NOT be a common cliché or too big but a real quote from a famous person. 
     Also, provide a 1-2 word aesthetic visual keyword that represents the mood of the quote (e.g., "minimalist", "fog", "brutalist", "serene nature", "dark desk").
     Return ONLY a JSON object with this exact structure:
     {"quote": "...", "author": "...", "keyword": "..."}
   `;
 
   try {
-    const responseText = await callGemini(prompt, apiKey, "gemini-2.5-flash-lite");
+    const responseText = await callGemini(prompt, apiKey, "gemini-3.1-flash-lite");
     const parsed = extractJSON(responseText);
 
     if (parsed.quote && parsed.author && parsed.keyword) {
@@ -363,7 +363,7 @@ export const assignGroupWithGemini = async (
   `;
 
   try {
-    const responseText = await callGemini(prompt, apiKey, "gemini-2.5-flash-lite");
+    const responseText = await callGemini(prompt, apiKey, "gemini-3.1-flash-lite");
     const parsed = extractJSON(responseText);
 
     if (parsed.groupName && userGroups.includes(parsed.groupName)) {
@@ -410,7 +410,7 @@ export const generateMilestonePlan = async (
   `;
 
   try {
-    const responseText = await callGemini(prompt, apiKey, "gemini-2.5-flash");
+    const responseText = await callGemini(prompt, apiKey, "gemini-2.5-flash-lite");
     const parsed = extractJSON(responseText);
 
     if (Array.isArray(parsed) && parsed.length > 0) {
