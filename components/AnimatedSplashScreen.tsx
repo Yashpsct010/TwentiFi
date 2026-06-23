@@ -12,6 +12,7 @@ type Props = {
 
 export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
   const [isVideoReady, setIsVideoReady] = useState(false);
+  const [showVideo, setShowVideo] = useState(true);
   const opacity = useSharedValue(1);
 
   const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
@@ -22,11 +23,14 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
         SplashScreen.hideAsync().catch(() => {});
       }
       
-      // When video finishes playing, fade out
+      // When video finishes playing, hide video and then fade out background
       if (status.didJustFinish) {
-        opacity.value = withTiming(0, { duration: 300 }, () => {
-          runOnJS(onAnimationComplete)();
-        });
+        setShowVideo(false);
+        setTimeout(() => {
+          opacity.value = withTiming(0, { duration: 300 }, () => {
+            runOnJS(onAnimationComplete)();
+          });
+        }, 50); // wait 50ms before fading out background
       }
     }
   };
@@ -40,16 +44,18 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
   return (
     <View style={[StyleSheet.absoluteFill, { zIndex: 9999, justifyContent: 'center', alignItems: 'center' }]}>
       <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#242426' }, animatedStyle]} />
-      <AnimatedVideo
-        source={require('../assets/images/loadinglogo.mp4')}
-        style={[{ width: 200, height: 200, borderRadius: 32, overflow: 'hidden', position: 'absolute' }, animatedStyle]}
-        resizeMode={ResizeMode.CONTAIN}
-        shouldPlay
-        isLooping={false}
-        onPlaybackStatusUpdate={onPlaybackStatusUpdate}
-        isMuted
-        rate={2.0}
-      />
+      {showVideo && (
+        <AnimatedVideo
+          source={require('../assets/images/loadinglogo.mp4')}
+          style={[{ width: 200, height: 200, borderRadius: 32, overflow: 'hidden', position: 'absolute' }, animatedStyle]}
+          resizeMode={ResizeMode.CONTAIN}
+          shouldPlay
+          isLooping={false}
+          onPlaybackStatusUpdate={onPlaybackStatusUpdate}
+          isMuted
+          rate={2.0}
+        />
+      )}
     </View>
   );
 }
