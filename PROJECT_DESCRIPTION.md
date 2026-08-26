@@ -28,33 +28,52 @@ Instead of a centralized server, the app uses **Google Gemini** as an intelligen
 - All Gen-Z styled coaching and daily summaries are generated dynamically via prompt-engineering against the LLM, rather than pre-programmed backend logic.
 
 ### Local Database Schema (SQLite)
-All user data lives entirely on their mobile device within these core relational tables:
-- **`sessions`**: Tracks the user's daily active block. Columns: `id`, `date`, `start_time`, `end_time`, `created_at`.
-- **`logs`**: The granular 20-minute activity entries. Columns: `id`, `session_id`, `timestamp`, `activity_text`, `mood`, `productivity_rating`.
-- **`goals`**: Daily objectives set by the user during the morning routine. Columns: `id`, `session_id`, `goal_text`, `completed`.
-- **`settings`**: User preferences (API keys, theme, timer intervals).
+All user data lives entirely on their mobile device within the `the25.db` SQLite database:
+- **`logs`**: Granular pulse entries. Columns: `id`, `timestamp`, `activity`, `mood` (`focused`, `neutral`, `exhausted`, `deep_work`), `productivity` (1–5), `audioUri`, `environment`, `tags` (JSON array), `remarks`, `duration`, `groupName`.
+- **State & Session Persistence (AsyncStorage / Zustand)**:
+  - `session-storage`: Active session state (`isActive`, `startTime`, `goals`, `activeMilestoneId`, notification IDs).
+  - `milestone-storage`: Habit and Target roadmaps, tasks (`pending`, `completed`, `carried`), daily reset dates, and progress.
+  - `settings-storage`: User preferences (`userName`, `startOfDay`, `endOfDay`, `loggingInterval`, `activityPrompts`, `missedLogReminders`, `geminiApiKey`, `theme`, `customTags`, `eodNotificationId`).
+  - `group-storage`: User-defined project groups for AI categorization.
+  - `insight-storage`: Cached AI daily summaries, advice, and productivity scores.
+  - `quote-storage`: Cached daily AI quotes, authors, and visual keywords.
 
 ---
 
 ## 4. Project Flow & Core User Loop
 
-The UX is designed around frictionless habit formation. **Logging must take less than 5 seconds.**
+The UX is designed around frictionless habit formation and rapid, continuous pulse logging:
 
-1. **Morning Setup (Session Start)**
-   - The user opens the app, defines their active hours (e.g., 9 AM to 5 PM), sets top goals for the day, and can utilize milestone templates. They are greeted by a `WisdomPulse` daily quote to set a productive tone.
-   
-2. **The 20-Minute Pulse (Notification Trigger)**
-   - A local, scheduled smart background notification fires precisely every 20 minutes from the session start time, accompanied by haptic feedback.
+1. **Initialization & Onboarding**
+   - **Boot Lifecycle**: On launch, the app initializes the SQLite database (`initDB`), loads existing logs, checks for a calendar day transition to automatically reset daily habit milestones (`resetHabitsIfNewDay`), re-hydrates notifications for any ongoing active sessions, and registers scheduled End-of-Day (EOD) reminders.
+   - **Onboarding Carousel**: First-time users navigate through a 5-step walkthrough (Introduction, Voice & AI Insights, Streaks, Smart Notification permissions, and Google AI Studio Gemini API Key setup).
 
-3. **The 5-Second Response Window**
-   - The user taps the notification and enters the quick-log UI. They speak or type a quick blurb (e.g., "Debugging the API endpoint"). 
-   - *If skipped for 5 minutes, an aggressive reminder notification fires.*
+2. **Pre-Session Setup & Milestone Alignment (Dashboard)**
+   - The user opens the Home Dashboard, greeted by personalized operating hours (`startOfDay` – `endOfDay`) and a dynamic `WisdomPulse` daily AI quote.
+   - The user can optionally link an active **Milestone** (Habit or Target roadmap) to automatically load pending and carried tasks into the session queue, or manage tasks directly.
+   - Tasks can be expanded into actionable subtasks with one tap via Gemini AI (`expandTaskWithGemini`) or reordered via drag-and-drop.
 
-4. **Timeline Assembly & AI Processing**
-   - The input is saved to SQLite, categorized by mood (🔥 Deep Work, 😐 Neutral, 😫 Exhausted), and appended to the beautiful Daily Timeline view.
+3. **Session Start & Smart Notifications**
+   - Tapping **"Start Session"** activates the session stopwatch (`sessionStore`), schedules a 2-hour forgotten timer safety reminder (`scheduleForgotTimerReminder`), and schedules recurring pulse notifications (`schedulePulseNotification`) at the user-configured interval (default 20 minutes) powered by Gen-Z prompt templates or Gemini AI generation.
+   - While active, the user sees a live elapsed stopwatch (with Pause/Resume and Lap reset) and interactive checklist tasks.
 
-5. **End of Day Insights**
-   - The app aggregates the 20-minute blocks, calculates a daily productivity score, updates the continuous Leetcode-style activity Streak Calendar, and provides AI-driven coaching (Historical Insights) based on the day's cadence.
+4. **The Pulse Logging Flow (Modal)**
+   - Triggered either manually via the "+ Log" button or by tapping a scheduled pulse/reminder notification.
+   - **Voice or Text Input**: The user can dictate via speech recognition (`expo-speech-recognition` / `expo-audio`). Audio is saved persistently to local app storage (`twentifi-audio/`) and transcribed via Google Gemini API (`transcribeWithGemini`).
+   - **Metadata Capture**: The user selects a mood (`focused`, `neutral`, `exhausted`, `deep_work`), productivity rating (1–5), optional environment (Home, Office, Cafe, Commute, Library, or Custom), tags, and remarks.
+   - **AI Auto-Categorization**: On save, Gemini automatically analyzes the activity context and assigns it to a matching user-defined Project Group (`assignGroupWithGemini`).
+   - **Pulse Reschedule**: Saving a log automatically resets and schedules the next pulse timer for seamless continuity.
+
+5. **Session Completion & Task Carrying**
+   - When the user taps **"End Session"**, completed tasks are marked done, unfinished tasks in active milestones transition to `carried` status for subsequent sessions, and active timer notifications are canceled.
+
+6. **Timeline, Streaks & AI Coaching**
+   - **Timeline & Projects**: The Timeline tab displays today's logs grouped by Project Group with inline audio playback; the Projects view aggregates historical totals and session archives across categories.
+   - **Stats & Streak Calendar**: Visualizes a continuous multi-week GitHub/LeetCode-style activity streak calendar and mood distribution.
+   - **AI Daily Coaching**: Gemini evaluates the daily log timeline to generate structured insights (`summary`, actionable `advice`, and overall `productivityLevel`).
+
+7. **Data Sovereignty & Local Backup**
+   - Full offline privacy: Users can export a complete `.zip` archive containing their SQLite database (`the25.db`) and all persistent voice recordings (`twentifi-audio/`), or import and merge archives from external storage.
 
 ---
 
