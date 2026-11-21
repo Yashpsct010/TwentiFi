@@ -2,24 +2,22 @@ import React, { useEffect } from 'react';
 import { View, Text, ImageBackground, StyleSheet } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { useQuoteStore } from '@/store/quoteStore';
-import { useSettingsStore } from '@/store/settingsStore';
-import { generateDailyQuote } from '@/services/gemini';
+import { fetchDailyQuote } from '@/services/aiGateway';
 
 export default function WisdomPulse() {
   const t = useTheme();
   const { quote, author, keyword, hasQuoteForToday, setQuote } = useQuoteStore();
-  const geminiApiKey = useSettingsStore(s => s.geminiApiKey);
 
   useEffect(() => {
-    // If we don't have a quote for today, fetch one
-    if (!hasQuoteForToday() && geminiApiKey) {
-      generateDailyQuote(geminiApiKey).then((data) => {
+    // If we don't have a quote for today, fetch one via AI Gateway
+    if (!hasQuoteForToday()) {
+      fetchDailyQuote().then((data) => {
         setQuote(data.quote, data.author, data.keyword);
       }).catch((e) => {
         console.log("Wisdom pulse quote error:", e);
       });
     }
-  }, [geminiApiKey, hasQuoteForToday, setQuote]);
+  }, [hasQuoteForToday, setQuote]);
 
   // Construct a reliable abstract image URL based on keyword using Picsum
   // Adding blur for a premium, moody aesthetic that ensures text legibility

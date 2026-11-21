@@ -252,7 +252,7 @@ function TimelineStack({ groupName, logs, t, playSound }: any) {
       </TouchableOpacity>
       
       {expanded && (
-        <Animated.View style={animatedHeight} className="mt-3 pl-4 border-l-2" style={[{ borderColor: t.colors.border }, animatedHeight]}>
+        <Animated.View className="mt-3 pl-4 border-l-2" style={[{ borderColor: t.colors.border }, animatedHeight]}>
           {logs.map((log: any, idx: number) => (
              <View key={log.id} className={idx !== logs.length - 1 ? "mb-3" : ""}>
                <TimelineLogCard log={log} t={t} playSound={playSound} compact />

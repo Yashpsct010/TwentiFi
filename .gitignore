@@ -55,3 +55,7 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Showcase & local video drafts
+video/
+assets/showcase/

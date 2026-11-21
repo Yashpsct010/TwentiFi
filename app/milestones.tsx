@@ -14,7 +14,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/use-theme";
 import { useMilestoneStore, Milestone, MilestoneType } from "@/store/milestoneStore";
 import { useSettingsStore } from "@/store/settingsStore";
-import { generateMilestonePlan } from "@/services/gemini";
+import { useMembership } from "@/hooks/use-membership";
+import { generateMilestoneRoadmap } from "@/services/aiGateway";
 import { useDialogStore } from "@/store/dialogStore";
 
 const TEMPLATES = [
@@ -203,13 +204,9 @@ function CreateForm({ t, onCreated, apiKey }: { t: any; onCreated: () => void; a
       useDialogStore.getState().showDialog("Title Required", "Please enter a milestone title first.");
       return;
     }
-    if (!apiKey) {
-      useDialogStore.getState().showDialog("API Key Required", "Add your Gemini API key in Settings to use AI plan generation.");
-      return;
-    }
     setIsGenerating(true);
     try {
-      const tasks = await generateMilestonePlan(title, description, deadline || undefined, apiKey);
+      const tasks = await generateMilestoneRoadmap(title, description, deadline || undefined);
       setTaskInputs(tasks);
     } catch (err: any) {
       useDialogStore.getState().showDialog("Generation Failed", err.message || "Could not generate plan.");
@@ -451,6 +448,7 @@ export default function MilestonesScreen() {
   const t = useTheme();
   const { milestones, deleteMilestone, completeMilestone, reopenMilestone, addMilestone, replaceAllTasks } = useMilestoneStore();
   const { geminiApiKey } = useSettingsStore();
+  const { isPulsePlus, canCreateMilestone, showGatedDialog } = useMembership();
 
   const [activeTab, setActiveTab] = useState<"active" | "completed">("active");
   const [showCreate, setShowCreate] = useState(false);
@@ -458,6 +456,32 @@ export default function MilestonesScreen() {
   const activeMilestones = milestones.filter((m) => !m.isCompleted);
   const completedMilestones = milestones.filter((m) => m.isCompleted);
   const displayed = activeTab === "active" ? activeMilestones : completedMilestones;
+
+  const handleStartCreate = () => {
+    if (!canCreateMilestone(activeMilestones.length)) {
+      showGatedDialog(
+        "Roadmap Limit Reached",
+        "Standard Pulse includes up to 2 active habit/target roadmaps. Upgrade to TwentiFi Pulse+ for unlimited active roadmaps and automated AI plans."
+      );
+      return;
+    }
+    setShowCreate(true);
+  };
+
+  const handleApplyTemplate = (tpl: typeof TEMPLATES[0]) => {
+    if (!canCreateMilestone(activeMilestones.length)) {
+      showGatedDialog(
+        "Roadmap Limit Reached",
+        "Standard Pulse includes up to 2 active habit/target roadmaps. Upgrade to TwentiFi Pulse+ for unlimited active roadmaps and automated AI plans."
+      );
+      return;
+    }
+    const id = addMilestone(tpl.title, tpl.type, tpl.description, (tpl as any).deadline);
+    if (tpl.tasks) {
+      replaceAllTasks(id, tpl.tasks);
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
 
   const handleDelete = (m: Milestone) => {
     useDialogStore.getState().showDialog(
@@ -519,7 +543,7 @@ export default function MilestonesScreen() {
               className="uppercase"
             >
               {tab === "active"
-                ? `Active (${activeMilestones.length})`
+                ? `Active (${activeMilestones.length}${!isPulsePlus ? '/2' : ''})`
                 : `Done (${completedMilestones.length})`}
             </Text>
           </TouchableOpacity>
@@ -587,7 +611,7 @@ export default function MilestonesScreen() {
         {/* New milestone button */}
         {!showCreate && activeTab === "active" && (
           <TouchableOpacity
-            onPress={() => setShowCreate(true)}
+            onPress={handleStartCreate}
             className="flex-row items-center justify-center rounded-[4px] py-4 mt-2 border"
             style={{ borderColor: t.colors.border, borderStyle: "dashed", backgroundColor: t.colors.bg }}
           >
@@ -620,13 +644,7 @@ export default function MilestonesScreen() {
               {TEMPLATES.map((tpl, i) => (
                 <TouchableOpacity
                   key={i}
-                  onPress={() => {
-                    const id = addMilestone(tpl.title, tpl.type, tpl.description, (tpl as any).deadline);
-                    if (tpl.tasks) {
-                      replaceAllTasks(id, tpl.tasks);
-                    }
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  }}
+                  onPress={() => handleApplyTemplate(tpl)}
                   className={`border ${t.border} rounded-[4px] p-4`}
                   style={{ backgroundColor: t.colors.card, minWidth: 140 }}
                 >

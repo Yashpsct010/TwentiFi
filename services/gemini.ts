@@ -1,4 +1,4 @@
-import { LogEntry } from "./database";
+﻿import { LogEntry } from "./database";
 
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from "react-native";
@@ -131,10 +131,7 @@ export const generateAIInsights = async (
   `;
 
   try {
-    const responseText = await callGemini(prompt, apiKey, "gemini-3.1-flash-lite").catch(async (e) => {
-      console.log(`[Gemini] gemini-3.1-flash-lite failed in generateAIInsights (${e.message}). Falling back to gemini-2.5-flash-lite.`);
-      return await callGemini(prompt, apiKey, "gemini-2.5-flash-lite");
-    });
+    const responseText = await callGemini(prompt, apiKey, "gemini-3.1-flash-lite");
     return extractJSON(responseText);
   } catch {
     return {
@@ -283,7 +280,7 @@ export const expandTaskWithGemini = async (
   `;
 
   try {
-    const responseText = await callGemini(prompt, apiKey, "gemini-2.5-flash-lite");
+    const responseText = await callGemini(prompt, apiKey, "gemini-3.1-flash-lite");
     const parsed = extractJSON(responseText);
 
     if (Array.isArray(parsed) && parsed.length > 0) {
@@ -306,7 +303,7 @@ export const generateDailyQuote = async (apiKey: string): Promise<{ quote: strin
 
   const prompt = `
     Generate a rare, highly insightful quote about focus, productivity, or discipline. 
-    It should NOT be a common cliché or too big but a real quote from a famous person. 
+    It should NOT be a common clichÃƒÂ© or too big but a real quote from a famous person. 
     Also, provide a 1-2 word aesthetic visual keyword that represents the mood of the quote (e.g., "minimalist", "fog", "brutalist", "serene nature", "dark desk").
     Return ONLY a JSON object with this exact structure:
     {"quote": "...", "author": "...", "keyword": "..."}
@@ -378,7 +375,7 @@ export const assignGroupWithGemini = async (
 
 /**
  * Generates an ordered, actionable task plan for a milestone using Gemini.
- * Returns a list of task strings (7–15 items).
+ * Returns a list of task strings (7Ã¢â‚¬â€œ15 items).
  */
 export const generateMilestonePlan = async (
   title: string,
@@ -410,7 +407,7 @@ export const generateMilestonePlan = async (
   `;
 
   try {
-    const responseText = await callGemini(prompt, apiKey, "gemini-2.5-flash-lite");
+    const responseText = await callGemini(prompt, apiKey, "gemini-3.1-flash-lite");
     const parsed = extractJSON(responseText);
 
     if (Array.isArray(parsed) && parsed.length > 0) {
@@ -422,4 +419,79 @@ export const generateMilestonePlan = async (
     throw new Error("Failed to generate plan. Check your API key or try again.");
   }
 };
+
+export interface RawSchedulePlanItem {
+  title: string;
+  startTime: string;
+  endTime?: string;
+  durationMinutes: number;
+  category: 'habit' | 'target' | 'focus';
+}
+
+/**
+ * Generates an AI-drafted day schedule blueprint using Gemini.
+ */
+export const generateScheduleBlueprintWithGemini = async (
+  params: {
+    userPrompt?: string;
+    targetDate: string;
+    contextType: 'tomorrow' | 'today';
+    activeMilestonesSummary?: string;
+    workdayStart: string;
+    workdayEnd: string;
+  },
+  apiKey: string
+): Promise<RawSchedulePlanItem[]> => {
+  if (!apiKey) {
+    throw new Error("API key missing. Add it in Settings to use AI Blueprint Studio.");
+  }
+
+  const prompt = `
+    You are an elite executive productivity and calendar design agent.
+    Task: Draft a realistic, high-leverage daily docket schedule for ${params.targetDate} (${params.contextType === 'tomorrow' ? 'Planning Tomorrow' : 'Rebalancing Today'}).
+    
+    Workday hours: ${params.workdayStart} to ${params.workdayEnd}.
+    ${params.userPrompt ? `User's direct intention / request: "${params.userPrompt}"` : ''}
+    ${params.activeMilestonesSummary ? `User's active milestones & habits:\n${params.activeMilestonesSummary}` : ''}
+
+    Rules:
+    - Plan 4 to 8 distinct chronological time blocks spanning the day.
+    - Each block must have:
+      * "title": Short, crisp actionable title (under 7 words).
+      * "startTime": 24-hour "HH:MM" (e.g. "09:00", "13:30").
+      * "durationMinutes": Integer minutes (15, 30, 45, 60, 90, or 120).
+      * "category": Exactly one of "habit", "target", or "focus".
+    - Schedule blocks sequentially with proper breaks.
+    - Output ONLY a JSON array. No markdown, no prose.
+    Example:
+    [
+      {"title": "Morning Kickoff & Docket", "startTime": "09:00", "durationMinutes": 30, "category": "focus"},
+      {"title": "Core Deep Work Block", "startTime": "09:30", "durationMinutes": 90, "category": "target"},
+      {"title": "Lunch & Mindful Walk", "startTime": "12:00", "durationMinutes": 60, "category": "habit"}
+    ]
+  `;
+
+  try {
+    const responseText = await callGemini(prompt, apiKey, "gemini-3.1-flash-lite");
+    const parsed = extractJSON(responseText);
+
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed.map((item: any) => ({
+        title: String(item.title || "Scheduled Focus"),
+        startTime: String(item.startTime || params.workdayStart),
+        durationMinutes: parseInt(item.durationMinutes, 10) || 30,
+        category: (["habit", "target", "focus"].includes(item.category)
+          ? item.category
+          : "focus") as 'habit' | 'target' | 'focus',
+      }));
+    }
+    throw new Error("Invalid schedule format returned from AI.");
+  } catch (err) {
+    console.error("Failed to generate schedule blueprint with Gemini:", err);
+    throw err;
+  }
+};
+
+
+
 

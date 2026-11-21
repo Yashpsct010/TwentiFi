@@ -21,6 +21,7 @@ import {
 
 import { useSettingsStore } from '@/store/settingsStore';
 import { useMilestoneStore } from '@/store/milestoneStore';
+import { useMembershipStore } from '@/store/membershipStore';
 import CustomDialog from '@/components/CustomDialog';
 import AnimatedSplashScreen from '@/components/AnimatedSplashScreen';
 
@@ -53,15 +54,16 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
-  // Initialize DB, load logs, reset habits if new day
+  // Initialize DB, load logs, reset habits & quotas if new day
   React.useEffect(() => {
     const setup = async () => {
       try {
         await initDB();
         await useLogStore.getState().loadLogs();
         
-        // Reset habit milestone tasks if a new calendar day has started
+        // Reset habit milestone tasks & membership AI quotas if a new calendar day has started
         useMilestoneStore.getState().resetHabitsIfNewDay();
+        useMembershipStore.getState().resetQuotasIfNewDay();
 
         // Re-hydrate any active session notifications if the app restarted
         const sessionState = useSessionStore.getState();
@@ -122,6 +124,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="logging" options={{ presentation: 'modal', headerShown: false }} />
           <Stack.Screen name="milestones" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="membership" options={{ presentation: 'modal', headerShown: false }} />
         </Stack>
         <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
         <CustomDialog />

@@ -1,6 +1,8 @@
 import * as Haptics from 'expo-haptics';
-import { expandTaskWithGemini } from "@/services/gemini";
+import { expandTask } from "@/services/aiGateway";
 import WisdomPulse from "@/components/WisdomPulse";
+import TodayDocket from "@/components/TodayDocket";
+import BlueprintModal from "@/components/BlueprintModal";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { useMilestoneStore } from "@/store/milestoneStore";
@@ -28,6 +30,8 @@ const STROKE = 3;
 const RADIUS = (RING_SIZE - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
+import { useMembership } from "@/hooks/use-membership";
+
 export default function HomeScreen() {
   const {
     isActive,
@@ -42,6 +46,7 @@ export default function HomeScreen() {
     reorderGoals,
   } = useSessionStore();
   const { userName, startOfDay, endOfDay, geminiApiKey } = useSettingsStore();
+  const { isPulsePlus, incrementAiExpansion, showGatedDialog } = useMembership();
   const t = useTheme();
 
   const [newGoal, setNewGoal] = useState("");
@@ -52,6 +57,8 @@ export default function HomeScreen() {
   const [isExpanding, setIsExpanding] = useState<string | null>(null);
   const [goalInputFocused, setGoalInputFocused] = useState(false);
   const [activeGoalInputFocused, setActiveGoalInputFocused] = useState(false);
+  const [plannerVisible, setPlannerVisible] = useState(false);
+  const [plannerMode, setPlannerMode] = useState<"tomorrow" | "today">("tomorrow");
   const router = useRouter();
   const lapStartOffset = useRef(0);
 
@@ -184,16 +191,26 @@ export default function HomeScreen() {
         text: "Expand with AI ✨",
         style: "default",
         onPress: async () => {
-          if (!geminiApiKey) {
+          if (!geminiApiKey && !isPulsePlus) {
             useDialogStore.getState().showDialog(
               "API Key Required",
-              "Add your Gemini API key in Settings to use AI expansion."
+              "Add your Gemini API key in Settings to use AI expansion, or upgrade to TwentiFi Pulse+ for zero-setup cloud AI."
             );
             return;
           }
+
+          const canProceed = incrementAiExpansion();
+          if (!canProceed) {
+            showGatedDialog(
+              "Daily AI Quota Reached",
+              "You have used your 3 daily AI goal expansions on Standard Pulse. Upgrade to TwentiFi Pulse+ for unlimited AI expansions."
+            );
+            return;
+          }
+
           setIsExpanding(goalId);
           try {
-            const newTasks = await expandTaskWithGemini(goalText, geminiApiKey);
+            const newTasks = await expandTask(goalText);
             replaceGoalWithMultiple(goalId, newTasks);
           } catch (err: any) {
             useDialogStore.getState().showDialog("Expansion Failed", err.message || "Failed to expand task.");
@@ -242,8 +259,18 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            {/* Right side: Milestones ring button + Settings button */}
-            <View className="flex-row items-center gap-3">
+            {/* Right side: AI Blueprint + Milestones ring button + Settings button */}
+            <View className="flex-row items-center gap-2.5">
+              {/* ── AI Blueprint Studio Button ──────────────────────────── */}
+              <TouchableOpacity
+                onPress={() => {
+                  setPlannerMode("tomorrow");
+                  setPlannerVisible(true);
+                }}
+                className={`w-11 h-11 rounded-[4px] border items-center justify-center ${t.iconBtn} ${t.border}`}
+              >
+                <Ionicons name="sparkles" size={17} color={t.colors.green} />
+              </TouchableOpacity>
 
               {/* ── Milestones Circular Progress Button ────────────────── */}
               <TouchableOpacity
@@ -293,275 +320,22 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* ── Hero card ───────────────────────────────────────────────── */}
-          <View className={`${t.cardBg} border ${t.border} rounded-[6px] p-4 mb-6`}>
-            <View className="flex-row items-center justify-between mb-4">
-              <Text
-                style={{ fontFamily: "Inter_600SemiBold", fontSize: 18 }}
-                className={t.textPrimary}
-              >
-                Focus Session
-              </Text>
-              <View className="flex-row items-center">
-                 <Ionicons name="calendar-outline" size={12} color={t.colors.subtext} />
-                 <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 9, letterSpacing: 1 }} className={`${t.textSubtle} uppercase ml-1`}>
-                   TODAY • {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase()}
-                 </Text>
-              </View>
-            </View>
-
-            {/* ── Milestone Selector ─────────────────────────────────── */}
-            <View className="mb-4">
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 8 }}
-              >
-                {activeMilestones.length === 0 ? (
-                  <TouchableOpacity
-                    onPress={() => router.push("/milestones" as any)}
-                    className={`border ${t.border} rounded-[4px] px-4 py-3 items-center`}
-                    style={{ borderStyle: "dashed", backgroundColor: t.colors.bg, minWidth: 180 }}
-                  >
-                    <Ionicons name="flag-outline" size={16} color={t.colors.subtext} />
-                    <Text
-                      style={{
-                        fontFamily: "Inter_600SemiBold",
-                        fontSize: 11,
-                        letterSpacing: 1,
-                        color: t.colors.subtext,
-                        marginTop: 4,
-                      }}
-                    >
-                      Create a Milestone first
-                    </Text>
-                  </TouchableOpacity>
-                ) : (
-                  activeMilestones.map((milestone) => {
-                  const isSelected = selectedMilestoneId === milestone.id;
-                  const pending = milestone.tasks.filter(
-                    (tk) => tk.status !== "completed"
-                  ).length;
-                  const total = milestone.tasks.length;
-
-                  return (
-                    <TouchableOpacity
-                      key={milestone.id}
-                      onPress={() =>
-                        setSelectedMilestoneId(
-                          isSelected ? null : milestone.id
-                        )
-                      }
-                      style={{
-                        borderColor: isSelected
-                          ? t.colors.green
-                          : t.colors.border,
-                        backgroundColor: isSelected
-                          ? t.colors.greenLight
-                          : t.colors.bg,
-                        borderWidth: 1,
-                        borderRadius: 4,
-                        paddingHorizontal: 12,
-                        paddingVertical: 8,
-                        minWidth: 120,
-                      }}
-                    >
-                      {/* Type badge */}
-                      <View className="flex-row items-center mb-1 gap-2">
-                        <View
-                          style={{
-                            backgroundColor: milestone.type === "target"
-                              ? t.colors.brown + "30"
-                              : t.colors.green + "25",
-                            borderRadius: 2,
-                            paddingHorizontal: 5,
-                            paddingVertical: 1,
-                          }}
-                        >
-                          <Text
-                            style={{
-                              fontFamily: "Inter_600SemiBold",
-                              fontSize: 8,
-                              letterSpacing: 1,
-                              color: milestone.type === "target"
-                                ? t.colors.brown
-                                : t.colors.green,
-                            }}
-                          >
-                            {milestone.type === "target" ? "TARGET" : "HABIT"}
-                          </Text>
-                        </View>
-                        {milestone.deadline && (
-                          <Text
-                            style={{
-                              fontFamily: "Inter_400Regular",
-                              fontSize: 9,
-                              color: t.colors.subtext,
-                            }}
-                          >
-                            {milestone.deadline}
-                          </Text>
-                        )}
-                      </View>
-
-                      <Text
-                        style={{
-                          fontFamily: "Inter_600SemiBold",
-                          fontSize: 13,
-                          color: isSelected ? t.colors.text : t.colors.textDim,
-                        }}
-                        numberOfLines={1}
-                      >
-                        {milestone.title}
-                      </Text>
-
-                      <Text
-                        style={{
-                          fontFamily: "Inter_400Regular",
-                          fontSize: 11,
-                          color: t.colors.subtext,
-                          marginTop: 3,
-                        }}
-                      >
-                        {pending}/{total} tasks left
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                  })
-                )}
-              </ScrollView>
-            </View>
-
-            {/* ── Session Tasks Preview ──────────────────────────────── */}
-            <View className="mb-5">
-              <View className="flex-row justify-between items-center mb-2">
-                <Text
-                  style={{ fontFamily: "Inter_600SemiBold", fontSize: 9, letterSpacing: 1.5 }}
-                  className={`${t.textSubtle} uppercase`}
-                >
-                  Session Tasks
-                </Text>
-              </View>
-
-              {!selectedMilestone ? (
-                <View
-                  className={`${t.inputBg} border ${t.border} rounded-[4px] p-3 items-center flex-row justify-center`}
-                  style={{ borderStyle: "dashed" }}
-                >
-                  <Ionicons name="layers-outline" size={14} color={t.colors.border} />
-                  <Text
-                    style={{
-                      fontFamily: "Inter_400Regular",
-                      fontSize: 12,
-                      color: t.colors.subtext,
-                      marginLeft: 6,
-                    }}
-                  >
-                    Select a milestone to load tasks
-                  </Text>
-                </View>
-              ) : (
-                <View className={`${t.inputBg} border ${t.border} rounded-[4px] overflow-hidden`}>
-                  {sessionPreviewTasks.slice(0, 2).map((task, idx) => (
-                    <View
-                      key={task.id}
-                      className="flex-row items-center px-3 py-2"
-                      style={{
-                        borderTopWidth: idx === 0 ? 0 : 1,
-                        borderTopColor: t.colors.border,
-                      }}
-                    >
-                      {task.status === "carried" && (
-                        <View
-                          style={{
-                            backgroundColor: t.colors.brown + "22",
-                            borderRadius: 2,
-                            paddingHorizontal: 5,
-                            paddingVertical: 2,
-                            marginRight: 8,
-                          }}
-                        >
-                          <Text
-                            style={{
-                              fontFamily: "Inter_600SemiBold",
-                              fontSize: 8,
-                              letterSpacing: 1,
-                              color: t.colors.brown,
-                            }}
-                          >
-                            CARRIED
-                          </Text>
-                        </View>
-                      )}
-                      <Text
-                        style={{
-                          fontFamily: "Inter_400Regular",
-                          fontSize: 13,
-                          color: t.colors.textDim,
-                          flex: 1,
-                        }}
-                        numberOfLines={1}
-                      >
-                        {task.text}
-                      </Text>
-                    </View>
-                  ))}
-                  {sessionPreviewTasks.length > 2 && (
-                    <View
-                      className="px-3 py-1.5"
-                      style={{
-                        borderTopWidth: 1,
-                        borderTopColor: t.colors.border,
-                        backgroundColor: t.colors.card,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          fontFamily: "Inter_600SemiBold",
-                          fontSize: 9,
-                          letterSpacing: 1,
-                          color: t.colors.subtext,
-                        }}
-                      >
-                        +{sessionPreviewTasks.length - 2} MORE TASKS
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              )}
-            </View>
-
-            {/* ── Initialize Session button ──────────────────────────── */}
-            <TouchableOpacity
-              onPress={handleStart}
-              className="rounded-[4px] p-3 items-center"
-              style={{
-                backgroundColor: selectedMilestone
-                  ? t.colors.text
-                  : t.isDark ? "rgba(255,255,255,0.1)" : "#D9D5CE",
-              }}
-              disabled={!selectedMilestone}
-            >
-              <Text
-                style={{
-                  fontFamily: "Inter_700Bold",
-                  fontSize: 13,
-                  letterSpacing: 1.5,
-                  color: selectedMilestone
-                    ? (t.isDark ? "#0D0B1F" : "#FAFAF8")
-                    : t.colors.subtext,
-                }}
-                className="uppercase"
-              >
-                {selectedMilestone
-                  ? "Start Session"
-                  : "Select a Milestone First"}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {/* ── Today's Docket (Execution Center & Continuous Day Burn Rail) ── */}
+          <TodayDocket
+            onOpenPlanner={() => {
+              setPlannerMode("today");
+              setPlannerVisible(true);
+            }}
+          />
           
           <WisdomPulse />
         </ScrollView>
+
+        <BlueprintModal
+          visible={plannerVisible}
+          onClose={() => setPlannerVisible(false)}
+          initialMode={plannerMode}
+        />
       </View>
     );
   }

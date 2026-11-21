@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { saveLog, getAllLogs, deleteAllLogs, LogEntry } from '@/services/database';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 interface LogState {
   logs: LogEntry[];

@@ -4,10 +4,11 @@ import { useSettingsStore } from "@/store/settingsStore";
 import { useInsightStore } from "@/store/insightStore";
 import { useTheme } from "@/hooks/use-theme";
 import { Ionicons } from "@expo/vector-icons";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as DocumentPicker from "expo-document-picker";
 import { zip, unzip } from "react-native-zip-archive";
 import { mergeLogsFromBackup } from "@/services/database";
+import { generateFormattedExport } from "@/services/aiGateway";
 import { useDialogStore } from "@/store/dialogStore";
 import * as Sharing from "expo-sharing";
 import React from "react";
@@ -22,8 +23,20 @@ import {
   View,
 } from "react-native";
 
+import { useMembership } from "@/hooks/use-membership";
+import { useRouter } from "expo-router";
+
 export default function SettingsScreen() {
   // ── All existing logic preserved ─────────────────────────────────────────
+  const router = useRouter();
+  const {
+    isPulsePlus,
+    tierName,
+    billingCycle,
+    isDeveloperSandbox,
+    toggleDeveloperSandbox,
+  } = useMembership();
+
   const {
     userName,
     setUserName,
@@ -91,6 +104,47 @@ export default function SettingsScreen() {
     } catch (error) {
       console.error("Export backup failed:", error);
       useDialogStore.getState().showDialog("Backup Failed", "An error occurred while generating the bundle.");
+    }
+  };
+
+  const exportFormatted = async (format: 'markdown' | 'csv' | 'notion') => {
+    if (logs.length === 0) {
+      useDialogStore.getState().showDialog("No Logs", "No data to export!");
+      return;
+    }
+
+    if (!isPulsePlus) {
+      useDialogStore.getState().showDialog(
+        "Formatted Export (Pulse+)",
+        `Exporting formatted ${format.toUpperCase()} files is a TwentiFi Pulse+ perk. Upgrade to unlock all data export formats.`,
+        [
+          {
+            text: "Upgrade to Pulse+ ✨",
+            style: "default",
+            onPress: () => router.push("/membership" as any),
+          },
+          { text: "Cancel", style: "cancel" },
+        ]
+      );
+      return;
+    }
+
+    try {
+      const content = generateFormattedExport(logs, format);
+      const ext = format === 'markdown' ? 'md' : format === 'csv' ? 'csv' : 'json';
+      const filename = `TwentiFi_Export_${new Date().toISOString().split("T")[0]}.${ext}`;
+      const filePath = `${FileSystem.documentDirectory}${filename}`;
+
+      await FileSystem.writeAsStringAsync(filePath, content, { encoding: FileSystem.EncodingType.UTF8 });
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(filePath);
+      } else {
+        useDialogStore.getState().showDialog("Sharing Unavailable", "Could not open sharing dialog.");
+      }
+    } catch (err: any) {
+      console.error("Export formatted failed:", err);
+      useDialogStore.getState().showDialog("Export Error", err.message || "Failed to generate export.");
     }
   };
 
@@ -192,6 +246,108 @@ export default function SettingsScreen() {
           </Text>
         </View>
 
+        {/* ── MEMBERSHIP ───────────────────────────────────────────────────── */}
+        <SectionHeader label="Membership" textSubtle={t.textSubtle} />
+
+        <SettingCard t={t}>
+          <View className="flex-row justify-between items-center mb-2">
+            <View className="flex-row items-center">
+              <Ionicons name="sparkles" size={16} color={isPulsePlus ? t.colors.green : t.colors.subtext} />
+              <Text
+                style={{ fontFamily: "Inter_600SemiBold", fontSize: 15 }}
+                className={`${t.textPrimary} ml-2`}
+              >
+                {isPulsePlus ? "TwentiFi Pulse+" : "Standard Pulse"}
+              </Text>
+            </View>
+            <View
+              className={`px-2 py-0.5 rounded-[2px] border ${t.border}`}
+              style={{ backgroundColor: isPulsePlus ? t.colors.greenLight : t.colors.bg }}
+            >
+              <Text
+                style={{
+                  fontFamily: "Inter_600SemiBold",
+                  fontSize: 9,
+                  letterSpacing: 1,
+                  color: isPulsePlus ? t.colors.text : t.colors.subtext,
+                }}
+              >
+                {isPulsePlus ? (billingCycle === 'monthly' ? "MONTHLY" : "ANNUAL") : "FREE PLAN"}
+              </Text>
+            </View>
+          </View>
+
+          <Text
+            style={{ fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 18 }}
+            className={`${t.textSubtle} mb-4`}
+          >
+            {isPulsePlus
+              ? "Zero-setup managed AI, unlimited roadmaps, unlimited project categories, and deep coaching active."
+              : "Basic local-first logging. Upgrade to unlock managed cloud AI, unlimited roadmaps, and deep coaching."}
+          </Text>
+
+          {!isPulsePlus ? (
+            <TouchableOpacity
+              onPress={() => router.push("/membership" as any)}
+              className="rounded-[4px] py-3 px-4 items-center justify-center"
+              style={{ backgroundColor: t.isDark ? t.colors.text : '#1A1A1A' }}
+              activeOpacity={0.85}
+            >
+              <Text
+                style={{
+                  fontFamily: "Inter_700Bold",
+                  fontSize: 11,
+                  letterSpacing: 1.5,
+                  color: t.isDark ? '#1A1A1A' : '#FFFFFF',
+                }}
+              >
+                UPGRADE TO PULSE+ →
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              onPress={() => router.push("/membership" as any)}
+              className={`rounded-[4px] py-2.5 px-4 items-center justify-center border ${t.border}`}
+              style={{ backgroundColor: t.colors.bg }}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={{
+                  fontFamily: "Inter_600SemiBold",
+                  fontSize: 11,
+                  letterSpacing: 1,
+                  color: t.colors.text,
+                }}
+              >
+                MANAGE SUBSCRIPTION
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Sandbox Toggle for testing */}
+          <View
+            className={`mt-4 pt-3 border-t flex-row items-center justify-between`}
+            style={{ borderColor: t.colors.border }}
+          >
+            <View className="flex-row items-center">
+              <Ionicons name="construct-outline" size={14} color={t.colors.subtext} />
+              <Text
+                style={{ fontFamily: "Inter_400Regular", fontSize: 11 }}
+                className={`${t.textSubtle} ml-1.5`}
+              >
+                Developer Sandbox Mode
+              </Text>
+            </View>
+            <Switch
+              trackColor={{ false: t.colors.border, true: t.colors.green }}
+              thumbColor="#fff"
+              onValueChange={toggleDeveloperSandbox}
+              value={isDeveloperSandbox}
+              style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+            />
+          </View>
+        </SettingCard>
+
         {/* ── PROFILE ──────────────────────────────────────────────────────── */}
         <SectionHeader label="Profile" textSubtle={t.textSubtle} />
 
@@ -226,44 +382,70 @@ export default function SettingsScreen() {
         {/* Gemini Key */}
         <SettingCard t={t}>
           <SettingRow icon="sparkles-outline" label="Gemini AI API Key" t={t} />
-          <TextInput
-            style={{
-              fontFamily: "Inter_400Regular",
-              fontSize: 14,
-              borderColor: keyFocused ? "#6B8E6F" : t.colors.border,
-              borderWidth: 1,
-              borderRadius: 4,
-              color: t.colors.textDim,
-              backgroundColor: t.colors.bg,
-              padding: 12,
-              marginTop: 10,
-            }}
-            value={geminiApiKey}
-            onChangeText={setGeminiApiKey}
-            placeholder="Paste your Gemini key here"
-            placeholderTextColor={t.colors.subtext}
-            secureTextEntry
-            onFocus={() => setKeyFocused(true)}
-            onBlur={() => setKeyFocused(false)}
-          />
-          <View className="flex-row items-center justify-between mt-3">
-            <Text
-              style={{ fontFamily: "Inter_400Regular", fontSize: 11 }}
-              className={t.textSubtle}
+          
+          {isPulsePlus ? (
+            <View
+              className={`border ${t.border} rounded-[4px] p-3 mt-2.5`}
+              style={{ backgroundColor: t.colors.bg }}
             >
-              Enables AI insights on Stats screen
-            </Text>
-            <TouchableOpacity
-              onPress={() => Linking.openURL("https://aistudio.google.com/app/apikey")}
-            >
+              <View className="flex-row items-center mb-1">
+                <Ionicons name="checkmark-circle" size={14} color={t.colors.green} />
+                <Text
+                  style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: t.colors.green }}
+                  className="ml-1.5"
+                >
+                  Managed Cloud AI Active
+                </Text>
+              </View>
               <Text
-                style={{ fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 1, color: t.colors.green }}
-                className="uppercase"
+                style={{ fontFamily: "Inter_400Regular", fontSize: 11, lineHeight: 16 }}
+                className={t.textSubtle}
               >
-                Get Key →
+                As a Pulse+ member, your voice transcriptions and AI coaching are handled automatically by our server. No API key needed.
               </Text>
-            </TouchableOpacity>
-          </View>
+            </View>
+          ) : (
+            <>
+              <TextInput
+                style={{
+                  fontFamily: "Inter_400Regular",
+                  fontSize: 14,
+                  borderColor: keyFocused ? "#6B8E6F" : t.colors.border,
+                  borderWidth: 1,
+                  borderRadius: 4,
+                  color: t.colors.textDim,
+                  backgroundColor: t.colors.bg,
+                  padding: 12,
+                  marginTop: 10,
+                }}
+                value={geminiApiKey}
+                onChangeText={setGeminiApiKey}
+                placeholder="Paste your Gemini key here"
+                placeholderTextColor={t.colors.subtext}
+                secureTextEntry
+                onFocus={() => setKeyFocused(true)}
+                onBlur={() => setKeyFocused(false)}
+              />
+              <View className="flex-row items-center justify-between mt-3">
+                <Text
+                  style={{ fontFamily: "Inter_400Regular", fontSize: 11 }}
+                  className={t.textSubtle}
+                >
+                  Enables AI insights on Stats screen
+                </Text>
+                <TouchableOpacity
+                  onPress={() => Linking.openURL("https://aistudio.google.com/app/apikey")}
+                >
+                  <Text
+                    style={{ fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 1, color: t.colors.green }}
+                    className="uppercase"
+                  >
+                    Get Key →
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </SettingCard>
 
         {/* ── APPEARANCE ─────────────────────────────────────────────────── */}
@@ -506,9 +688,68 @@ export default function SettingsScreen() {
         </SettingCard>
 
         {/* ── DATA MANAGEMENT ───────────────────────────────────────────── */}
-        <SectionHeader label="Data Management" textSubtle={t.textSubtle} />
+        <SectionHeader label="Data Management & Exports" textSubtle={t.textSubtle} />
 
-        {/* Export */}
+        {/* Formatted Exports Card (Level 1) */}
+        <View
+          className={`border ${t.border} rounded-[4px] p-4 mb-3`}
+          style={{ backgroundColor: t.colors.card }}
+        >
+          <View className="flex-row justify-between items-center mb-3">
+            <View className="flex-row items-center">
+              <Ionicons name="document-text-outline" size={16} color={t.colors.green} />
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14 }} className={`${t.textPrimary} ml-2`}>
+                Formatted Exports
+              </Text>
+            </View>
+            <View className={`px-2 py-0.5 rounded-[2px] border ${t.border}`} style={{ backgroundColor: isPulsePlus ? t.colors.greenLight : t.colors.bg }}>
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 9, letterSpacing: 1, color: isPulsePlus ? t.colors.text : t.colors.subtext }}>
+                {isPulsePlus ? "PULSE+ UNLOCKED" : "PULSE+"}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 18 }} className={`${t.textSubtle} mb-3`}>
+            Export your timeline into human-readable Markdown reports, CSV spreadsheets for Excel/Sheets, or Notion datasets.
+          </Text>
+
+          <View className="flex-row gap-2">
+            <TouchableOpacity
+              onPress={() => exportFormatted('markdown')}
+              className={`flex-1 py-2.5 px-2 rounded-[4px] border ${t.border} items-center`}
+              style={{ backgroundColor: t.colors.bg }}
+              activeOpacity={0.75}
+            >
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: t.colors.text }}>
+                MARKDOWN (.md)
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => exportFormatted('csv')}
+              className={`flex-1 py-2.5 px-2 rounded-[4px] border ${t.border} items-center`}
+              style={{ backgroundColor: t.colors.bg }}
+              activeOpacity={0.75}
+            >
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: t.colors.text }}>
+                CSV SHEET
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => exportFormatted('notion')}
+              className={`flex-1 py-2.5 px-2 rounded-[4px] border ${t.border} items-center`}
+              style={{ backgroundColor: t.colors.bg }}
+              activeOpacity={0.75}
+            >
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: t.colors.text }}>
+                NOTION JSON
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* SQLite Backup */}
         <TouchableOpacity
           onPress={exportLogs}
           className={`flex-row items-center p-4 rounded-[4px] border ${t.border} mb-3`}
@@ -519,7 +760,7 @@ export default function SettingsScreen() {
             style={{ fontFamily: "Inter_500Medium", fontSize: 14 }}
             className={`${t.textPrimary} ml-3`}
           >
-            Create Backup (.zip)
+            Create Full Backup (.zip)
           </Text>
           <Ionicons name="chevron-forward" size={16} color={t.colors.border} style={{ marginLeft: "auto" }} />
         </TouchableOpacity>

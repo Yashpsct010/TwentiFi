@@ -154,6 +154,48 @@ export async function scheduleEndOfDayHabitReminder(endOfDay: string): Promise<s
   }
 }
 
+export async function scheduleScheduleItemReminder(
+  item: { title: string; startTime: string },
+  targetDate: string
+): Promise<string | null> {
+  if (Platform.OS === "web") return null;
+
+  try {
+    const [hoursStr, minutesStr] = item.startTime.split(":");
+    const hours = parseInt(hoursStr, 10);
+    const minutes = parseInt(minutesStr, 10);
+
+    const [yearStr, monthStr, dayStr] = targetDate.split("-");
+    const triggerDate = new Date(
+      parseInt(yearStr, 10),
+      parseInt(monthStr, 10) - 1,
+      parseInt(dayStr, 10),
+      hours,
+      minutes,
+      0
+    );
+
+    // Only schedule if in future
+    if (triggerDate.getTime() <= Date.now()) return null;
+
+    return await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `Docket Focus: ${item.title} ⏱️`,
+        body: `Time for your scheduled block: ${item.title} (${item.startTime}). Tap to start your focus pulse.`,
+        data: { type: "schedule_reminder", title: item.title },
+        sound: true,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: triggerDate,
+      },
+    });
+  } catch (e) {
+    console.warn("Failed to schedule task reminder:", e);
+    return null;
+  }
+}
+
 export async function cancelNotification(identifier: string | null) {
   if (Platform.OS === "web" || !identifier) return;
   try {

@@ -1,7 +1,8 @@
-import { transcribeWithGemini, assignGroupWithGemini } from "@/services/gemini";
+import { transcribeAudio, assignGroup } from "@/services/aiGateway";
 import { useLogStore } from "@/store/logStore";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
+import { useMembership } from "@/hooks/use-membership";
 import { useGroupStore } from "@/store/groupStore";
 import { useTheme } from "@/hooks/use-theme";
 import { Ionicons } from "@expo/vector-icons";
@@ -207,19 +208,19 @@ export default function LoggingScreen() {
     }
     setIsStopping(false);
 
-    if (finalUri && geminiApiKey) {
+    if (finalUri) {
       setIsTranscribing(true);
       setSttError(null);
       try {
-        const professionalTranscript = await transcribeWithGemini(finalUri, geminiApiKey);
+        const professionalTranscript = await transcribeAudio(finalUri);
         if (professionalTranscript) {
           if (!activity.trim() || activity === liveTranscript) setActivity(professionalTranscript);
           setLiveTranscript(professionalTranscript);
         }
       } catch (err: any) {
-        console.error("Gemini transcription failed:", err);
+        console.error("Transcription failed:", err);
         if (liveTranscript && !activity.trim()) setActivity(liveTranscript);
-        if (!liveTranscript) setSttError("Transcription failed");
+        if (!liveTranscript) setSttError("Transcription unavailable");
       } finally {
         setIsTranscribing(false);
       }
@@ -266,12 +267,10 @@ export default function LoggingScreen() {
         const finalActivity = activity.trim() || (stableUri ? "No transcript" : "");
         
         let determinedGroup = "Uncategorized";
-        if (geminiApiKey) {
-          try {
-            determinedGroup = await assignGroupWithGemini(finalActivity, liveTranscript, useGroupStore.getState().groups, geminiApiKey);
-          } catch (e) {
-            console.warn("AI Grouping failed, falling back to Uncategorized", e);
-          }
+        try {
+          determinedGroup = await assignGroup(finalActivity, liveTranscript, useGroupStore.getState().groups);
+        } catch (e) {
+          console.warn("AI Grouping failed, falling back to Uncategorized", e);
         }
 
         await addLog(

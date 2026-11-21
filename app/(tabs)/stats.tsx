@@ -1,4 +1,5 @@
 import HistoricalInsightsCard from "@/components/HistoricalInsightsCard";
+import WeeklyTrendCard from "@/components/WeeklyTrendCard";
 import StreakCalendar from "@/components/StreakCalendar";
 import { useTheme } from "@/hooks/use-theme";
 import { generateAIInsights } from "@/services/gemini";
@@ -107,6 +108,8 @@ export default function StatsScreen() {
         </View>
 
         <HistoricalInsightsCard logs={logs} />
+
+        <WeeklyTrendCard logs={logs} />
 
         <View
           className={`${t.cardBg} border ${t.border} rounded-[4px] p-5 mb-6 flex-row items-center`}

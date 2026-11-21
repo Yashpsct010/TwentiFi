@@ -34,6 +34,8 @@ export const useSessionStore = create<SessionState>()(
       startTime: null,
       endTime: null,
       activeMilestoneId: null,
+      pulseNotificationId: null,
+      forgotTimerNotificationId: null,
       goals: [],
       startSession: async (goals, milestoneId) => {
         set({
