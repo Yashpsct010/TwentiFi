@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Download, 
   Mic, 
@@ -9,13 +9,13 @@ import {
   Cpu, 
   Flame, 
   ExternalLink, 
-  Volume2, 
-  VolumeX, 
   ChevronDown,
   KeyRound,
   Terminal,
   ArrowUpRight,
-  CheckCircle2
+  CheckCircle2,
+  Lock,
+  Zap
 } from 'lucide-react';
 import logoHorizontal from '../../assets/images/logo-secondary-horizontal.png';
 
@@ -26,15 +26,21 @@ const GITHUB_REPO = "https://github.com/Yashpsct010/TwentiFi";
 const AI_STUDIO_URL = "https://aistudio.google.com/app/apikey";
 
 export default function App() {
-  const [isMuted, setIsMuted] = useState(true);
-  const videoRef = useRef(null);
+  const [scrolled, setScrolled] = useState(false);
 
-  const toggleSound = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !videoRef.current.muted;
-      setIsMuted(videoRef.current.muted);
-    }
-  };
+  useEffect(() => {
+    const handleScroll = () => {
+      // Show navbar only after user starts scrolling down
+      if (window.scrollY > 80) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const scrollToSection = (id) => {
     const el = document.getElementById(id);
@@ -47,147 +53,94 @@ export default function App() {
     <div className="min-h-screen bg-[#0d0d0d] text-[#f4f1eb] font-body selection:bg-primary/20 selection:text-primary">
 
       {/* ========================================================================= */}
-      {/* SECTION 1: FULLSCREEN SHOWCASE HERO (100vh)                               */}
+      {/* FLOATING NAVBAR: Appears ONLY when user starts scrolling                  */}
       {/* ========================================================================= */}
-      <section className="relative w-full h-screen min-h-[640px] flex flex-col justify-between overflow-hidden bg-black">
-        {/* Background Showcase Video */}
+      <header 
+        className={`fixed top-0 inset-x-0 z-50 px-6 md:px-12 py-3.5 flex justify-between items-center bg-[#0d0d0d]/90 backdrop-blur-md border-b border-white/10 transition-all duration-300 ${
+          scrolled 
+            ? 'opacity-100 translate-y-0 pointer-events-auto shadow-xl shadow-black/60' 
+            : 'opacity-0 -translate-y-4 pointer-events-none'
+        }`}
+      >
+        <div className="flex items-center gap-4">
+          <a href="#" className="flex items-center gap-3 group">
+            <img 
+              src={logoHorizontal} 
+              alt="TwentiFi" 
+              className="h-7 md:h-8 w-auto brightness-0 invert opacity-95 group-hover:opacity-100 transition-opacity" 
+            />
+          </a>
+          <div className="hidden sm:inline-flex items-center gap-2 px-2.5 py-1 rounded bg-white/5 border border-white/10 font-mono text-[10px] tracking-wider text-[#d4c3b3]">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>v1.0.0 RELEASE</span>
+          </div>
+        </div>
+
+        <nav className="flex items-center gap-4 md:gap-8 font-mono text-xs tracking-wider">
+          <button 
+            onClick={() => scrollToSection('manifesto')}
+            className="hidden md:inline-block text-[#9c9890] hover:text-[#f4f1eb] transition-colors uppercase cursor-pointer"
+          >
+            Overview
+          </button>
+          <button 
+            onClick={() => scrollToSection('architecture')}
+            className="hidden md:inline-block text-[#9c9890] hover:text-[#f4f1eb] transition-colors uppercase cursor-pointer"
+          >
+            Architecture
+          </button>
+          <button 
+            onClick={() => scrollToSection('gemini-engine')}
+            className="hidden md:inline-block text-[#9c9890] hover:text-[#f4f1eb] transition-colors uppercase cursor-pointer"
+          >
+            Gemini Engine
+          </button>
+          <a
+            href={GITHUB_REPO}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:inline-flex items-center gap-1 text-[#9c9890] hover:text-[#f4f1eb] transition-colors uppercase"
+          >
+            <span>GitHub</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </a>
+          <a
+            href={DIRECT_APK_URL}
+            download="twentifi.apk"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-2 bg-[#d4c3b3] text-[#0d0d0d] font-semibold rounded hover:bg-[#e8dccc] active:scale-95 transition-all text-xs tracking-wide cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>GET APK</span>
+          </a>
+        </nav>
+      </header>
+
+      {/* ========================================================================= */}
+      {/* SECTION 1: FULLSCREEN SHOWCASE VIDEO (100vh)                              */}
+      {/* Clean video playing in loop, no overlays, no audio, full viewport         */}
+      {/* ========================================================================= */}
+      <section className="relative w-full h-screen min-h-[600px] flex flex-col justify-end items-center overflow-hidden bg-black">
+        {/* Unobstructed Looping Video */}
         <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
           <video
-            ref={videoRef}
             src="/showcase.mp4"
             autoPlay
             loop
             muted
             playsInline
-            className="w-full h-full object-cover object-center filter brightness-[0.92] contrast-[1.05]"
+            className="w-full h-full object-cover object-center"
           />
-          {/* Subtle cinematic overlays for text contrast without obscuring the showcase */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/85 via-black/20 to-black/90 pointer-events-none" />
-          <div className="absolute inset-0 bg-radial-gradient from-transparent via-transparent to-black/60 pointer-events-none" />
+          {/* Subtle bottom fade into the next section */}
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0d0d0d] to-transparent pointer-events-none" />
         </div>
 
-        {/* Top Navigation */}
-        <header className="relative z-20 w-full px-6 md:px-12 pt-6 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <a href="#" className="flex items-center gap-3 group">
-              <img 
-                src={logoHorizontal} 
-                alt="TwentiFi" 
-                className="h-7 md:h-8 w-auto brightness-0 invert opacity-95 group-hover:opacity-100 transition-opacity" 
-              />
-            </a>
-            <div className="hidden sm:inline-flex items-center gap-2 px-2.5 py-1 rounded bg-white/5 border border-white/10 font-mono text-[10px] tracking-wider text-[#d4c3b3]">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>v1.0.0 RELEASE</span>
-            </div>
-          </div>
-
-          <nav className="flex items-center gap-4 md:gap-8 font-mono text-xs tracking-wider">
-            <button 
-              onClick={() => scrollToSection('architecture')}
-              className="hidden md:inline-block text-[#9c9890] hover:text-[#f4f1eb] transition-colors uppercase cursor-pointer"
-            >
-              Architecture
-            </button>
-            <button 
-              onClick={() => scrollToSection('gemini-engine')}
-              className="hidden md:inline-block text-[#9c9890] hover:text-[#f4f1eb] transition-colors uppercase cursor-pointer"
-            >
-              Gemini Engine
-            </button>
-            <a
-              href={GITHUB_REPO}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden sm:inline-flex items-center gap-1 text-[#9c9890] hover:text-[#f4f1eb] transition-colors uppercase"
-            >
-              <span>GitHub</span>
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </a>
-            <a
-              href={DIRECT_APK_URL}
-              download="twentifi.apk"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 bg-[#d4c3b3] text-[#0d0d0d] font-semibold rounded hover:bg-[#e8dccc] active:scale-95 transition-all text-xs tracking-wide cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>GET APK</span>
-            </a>
-          </nav>
-        </header>
-
-        {/* Video Sound Toggle Button (Floating) */}
-        <div className="relative z-20 px-6 md:px-12 flex justify-end">
-          <button
-            onClick={toggleSound}
-            aria-label={isMuted ? "Unmute audio" : "Mute audio"}
-            className="flex items-center gap-2 px-3 py-1.5 rounded bg-black/60 backdrop-blur-md border border-white/15 text-[#f4f1eb] hover:bg-black/80 transition-all font-mono text-[11px] tracking-widest uppercase cursor-pointer"
-          >
-            {isMuted ? (
-              <>
-                <VolumeX className="w-3.5 h-3.5 text-[#d4c3b3]" />
-                <span className="text-[#9c9890]">UNMUTE AUDIO</span>
-              </>
-            ) : (
-              <>
-                <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-[#f4f1eb]">SOUND ON</span>
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Bottom Hero HUD / Action Bar */}
-        <div className="relative z-20 w-full px-6 md:px-12 pb-8 md:pb-12 max-w-7xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-8">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-[#d4c3b3]/10 border border-[#d4c3b3]/25 font-mono text-[11px] text-[#d4c3b3] tracking-widest uppercase mb-4">
-              <Sparkles className="w-3 h-3" />
-              <span>THE ULTRADIAN COGNITIVE LEDGER</span>
-            </div>
-            <h1 className="font-display text-4xl sm:text-6xl md:text-7xl font-light tracking-tight text-[#f4f1eb] leading-[1.08] mb-4">
-              AI life-logging in <br className="hidden sm:inline" />
-              <span className="italic font-normal text-[#d4c3b3]">twenty-minute</span> pulses.
-            </h1>
-            <p className="text-sm sm:text-base text-[#9c9890] max-w-xl font-body leading-relaxed">
-              Autonomous check-ins, fluid voice reflection, and cascading day-burn dockets powered by Google Gemini 3.1 Flash Lite. Precision productivity without the SaaS fatigue.
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row md:flex-col items-start sm:items-center md:items-end gap-3 shrink-0">
-            <a
-              href={DIRECT_APK_URL}
-              download="twentifi.apk"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full sm:w-auto flex items-center justify-center gap-3 px-7 py-3.5 bg-[#d4c3b3] text-[#0d0d0d] font-semibold text-sm rounded hover:bg-[#e8dccc] shadow-lg shadow-black/50 transition-all font-mono tracking-wide cursor-pointer"
-            >
-              <Download className="w-4 h-4" />
-              <span>DOWNLOAD APK (v1.0.0)</span>
-            </a>
-
-            <div className="flex items-center gap-3 text-xs text-[#9c9890] font-mono">
-              <span>Android 10+</span>
-              <span>•</span>
-              <span>~97 MB</span>
-              <span>•</span>
-              <a 
-                href={GITHUB_RELEASE_PAGE} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="underline hover:text-[#d4c3b3]"
-              >
-                GitHub Release
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* Scroll Indicator Prompt */}
-        <div className="relative z-20 w-full pb-4 flex justify-center items-center">
+        {/* Minimal Scroll Down Prompt */}
+        <div className="relative z-10 pb-8 flex flex-col items-center">
           <button 
-            onClick={() => scrollToSection('architecture')} 
-            className="flex flex-col items-center gap-1.5 text-[#9c9890] hover:text-[#d4c3b3] transition-colors group cursor-pointer"
+            onClick={() => scrollToSection('manifesto')} 
+            className="flex flex-col items-center gap-2 px-4 py-2 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-[#f4f1eb] hover:bg-black/80 hover:border-[#d4c3b3]/50 transition-all group cursor-pointer"
           >
             <span className="font-mono text-[10px] tracking-[0.25em] uppercase text-[#9c9890] group-hover:text-[#d4c3b3]">
               Scroll to explore
@@ -198,7 +151,93 @@ export default function App() {
       </section>
 
       {/* ========================================================================= */}
-      {/* SECTION 2: SYSTEM ARCHITECTURE & CADENCE                                   */}
+      {/* SECTION 2: HERO CONTENT & VALUE PROPOSITION (Appears after the video)     */}
+      {/* ========================================================================= */}
+      <section id="manifesto" className="py-24 md:py-36 px-6 md:px-12 bg-[#0d0d0d] relative border-t border-white/5">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-12 mb-16 pb-12 border-b border-white/10">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-[#d4c3b3]/10 border border-[#d4c3b3]/25 font-mono text-[11px] text-[#d4c3b3] tracking-widest uppercase mb-6">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>THE ULTRADIAN COGNITIVE LEDGER</span>
+              </div>
+              <h1 className="font-display text-4xl sm:text-6xl md:text-7xl font-light tracking-tight text-[#f4f1eb] leading-[1.08] mb-6">
+                AI life-logging in <br />
+                <span className="italic font-normal text-[#d4c3b3]">twenty-minute</span> pulses.
+              </h1>
+              <p className="text-base sm:text-lg text-[#9c9890] font-body leading-relaxed max-w-2xl">
+                Autonomous check-ins, fluid voice reflection, and cascading day-burn dockets powered by Google Gemini 3.1 Flash Lite. Precision productivity without the SaaS fatigue.
+              </p>
+            </div>
+
+            <div className="flex flex-col items-start lg:items-end gap-4 shrink-0">
+              <a
+                href={DIRECT_APK_URL}
+                download="twentifi.apk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-[#d4c3b3] text-[#0d0d0d] font-semibold text-sm rounded hover:bg-[#e8dccc] shadow-xl shadow-black/50 transition-all font-mono tracking-wide cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                <span>DOWNLOAD APK (v1.0.0)</span>
+              </a>
+
+              <div className="flex items-center gap-3 text-xs text-[#9c9890] font-mono">
+                <span>Android 10+</span>
+                <span>•</span>
+                <span>~97 MB Signed APK</span>
+                <span>•</span>
+                <a 
+                  href={GITHUB_RELEASE_PAGE} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="underline hover:text-[#d4c3b3]"
+                >
+                  GitHub Releases
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Telemetry Highlights Strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-mono text-xs">
+            <div className="p-4 rounded bg-[#141414] border border-white/10 flex items-center gap-3">
+              <Clock className="w-4 h-4 text-[#d4c3b3] shrink-0" />
+              <div>
+                <div className="text-[10px] text-[#9c9890]">CYCLE</div>
+                <div className="text-[#f4f1eb] font-semibold">20-Min Cadence</div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded bg-[#141414] border border-white/10 flex items-center gap-3">
+              <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+              <div>
+                <div className="text-[10px] text-[#9c9890]">MODEL</div>
+                <div className="text-[#f4f1eb] font-semibold">Gemini 3.1 Flash Lite</div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded bg-[#141414] border border-white/10 flex items-center gap-3">
+              <Lock className="w-4 h-4 text-emerald-400 shrink-0" />
+              <div>
+                <div className="text-[10px] text-[#9c9890]">STORAGE</div>
+                <div className="text-[#f4f1eb] font-semibold">100% Local SQLite</div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded bg-[#141414] border border-white/10 flex items-center gap-3">
+              <ShieldCheck className="w-4 h-4 text-[#d4c3b3] shrink-0" />
+              <div>
+                <div className="text-[10px] text-[#9c9890]">LICENSE</div>
+                <div className="text-[#f4f1eb] font-semibold">Open Source MIT</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* SECTION 3: SYSTEM ARCHITECTURE & CADENCE                                   */}
       {/* ========================================================================= */}
       <section id="architecture" className="py-24 md:py-36 px-6 md:px-12 border-t border-white/10 bg-[#0d0d0d] relative">
         <div className="max-w-7xl mx-auto">
@@ -308,7 +347,7 @@ export default function App() {
       </section>
 
       {/* ========================================================================= */}
-      {/* SECTION 3: PRIVACY & SYSTEM TELEMETRY                                      */}
+      {/* SECTION 4: PRIVACY & SYSTEM TELEMETRY                                      */}
       {/* ========================================================================= */}
       <section className="py-20 px-6 md:px-12 bg-[#121212] border-t border-white/10">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -357,7 +396,7 @@ export default function App() {
       </section>
 
       {/* ========================================================================= */}
-      {/* SECTION 4: GEMINI 3.1 FLASH LITE SETUP GUIDE                               */}
+      {/* SECTION 5: GEMINI 3.1 FLASH LITE SETUP GUIDE                               */}
       {/* ========================================================================= */}
       <section id="gemini-engine" className="py-24 md:py-36 px-6 md:px-12 border-t border-white/10 bg-[#0d0d0d]">
         <div className="max-w-7xl mx-auto">
@@ -457,7 +496,7 @@ export default function App() {
       </section>
 
       {/* ========================================================================= */}
-      {/* SECTION 5: DOWNLOAD LEDGER & APK INSTALLATION INSTRUCTIONS                 */}
+      {/* SECTION 6: DOWNLOAD LEDGER & APK INSTALLATION INSTRUCTIONS                 */}
       {/* ========================================================================= */}
       <section id="download" className="py-24 md:py-36 px-6 md:px-12 border-t border-white/10 bg-[#121212]">
         <div className="max-w-4xl mx-auto">
