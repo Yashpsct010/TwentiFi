@@ -8,13 +8,13 @@ import { generateWeeklyTrendInsights, WeeklyTrendInsights } from '@/services/aiG
 
 export default function WeeklyTrendCard({ logs }: { logs: LogEntry[] }) {
   const t = useTheme();
-  const { isPulsePlus, showPaywall } = useMembership();
+  const { isPro, showPaywall } = useMembership();
   const [trendData, setTrendData] = useState<WeeklyTrendInsights | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     async function loadTrends() {
-      if (!isPulsePlus || logs.length === 0) return;
+      if (!isPro || logs.length === 0) return;
       setIsLoading(true);
       try {
         const data = await generateWeeklyTrendInsights(logs);
@@ -26,27 +26,28 @@ export default function WeeklyTrendCard({ logs }: { logs: LogEntry[] }) {
       }
     }
     loadTrends();
-  }, [isPulsePlus, logs.length]);
+  }, [isPro, logs.length]);
 
   // If Basic plan, render architectural teaser
-  if (!isPulsePlus) {
+  if (!isPro) {
     return (
       <View
         className={`border ${t.border} rounded-[4px] p-5 mb-6`}
         style={{ backgroundColor: t.colors.card }}
       >
         <View className="flex-row justify-between items-center mb-3">
-          <View className="flex-row items-center">
+          <View className="flex-row items-center flex-1 mr-2">
             <Ionicons name="trending-up-outline" size={16} color={t.colors.green} />
             <Text
-              style={{ fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 2 }}
+              style={{ fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 1 }}
               className={`${t.textSubtle} uppercase ml-2`}
+              numberOfLines={1}
             >
-              Weekly Behavioral Trends
+              Weekly Focus Trends
             </Text>
           </View>
           <View
-            className={`px-2 py-0.5 rounded-[2px] border ${t.border}`}
+            className={`px-2 py-0.5 rounded-[2px] border ${t.border} shrink-0`}
             style={{ backgroundColor: t.colors.greenLight }}
           >
             <Text
@@ -57,7 +58,7 @@ export default function WeeklyTrendCard({ logs }: { logs: LogEntry[] }) {
                 color: t.colors.text,
               }}
             >
-              PULSE+
+              PRO
             </Text>
           </View>
         </View>
@@ -126,7 +127,7 @@ export default function WeeklyTrendCard({ logs }: { logs: LogEntry[] }) {
     );
   }
 
-  // Active Pulse+ Member View
+  // Active Pro Member View
   return (
     <View
       className={`border ${t.border} rounded-[4px] p-5 mb-6`}
@@ -134,17 +135,19 @@ export default function WeeklyTrendCard({ logs }: { logs: LogEntry[] }) {
     >
       {/* Header */}
       <View className="flex-row justify-between items-center mb-3">
-        <View className="flex-row items-center">
-          <Ionicons name="sparkles" size={16} color={t.colors.green} />
+        <View className="flex-row items-center flex-1 mr-2">
+          <Ionicons name="sparkles" size={15} color={t.colors.green} />
           <Text
-            style={{ fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 2 }}
+            style={{ fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 1 }}
             className={`${t.textSubtle} uppercase ml-2`}
+            numberOfLines={1}
+            ellipsizeMode="tail"
           >
-            Behavioral Trend Intelligence
+            Trend Intelligence
           </Text>
         </View>
         <View
-          className={`px-2 py-0.5 rounded-[2px] border ${t.border}`}
+          className={`px-2 py-0.5 rounded-[2px] border ${t.border} shrink-0`}
           style={{ backgroundColor: t.colors.greenLight }}
         >
           <Text
@@ -155,7 +158,7 @@ export default function WeeklyTrendCard({ logs }: { logs: LogEntry[] }) {
               color: t.colors.text,
             }}
           >
-            PULSE+ ACTIVE
+            PRO ACTIVE
           </Text>
         </View>
       </View>

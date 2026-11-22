@@ -30,11 +30,9 @@ export default function SettingsScreen() {
   // ── All existing logic preserved ─────────────────────────────────────────
   const router = useRouter();
   const {
-    isPulsePlus,
+    isPro,
     tierName,
     billingCycle,
-    isDeveloperSandbox,
-    toggleDeveloperSandbox,
   } = useMembership();
 
   const {
@@ -113,13 +111,13 @@ export default function SettingsScreen() {
       return;
     }
 
-    if (!isPulsePlus) {
+    if (!isPro) {
       useDialogStore.getState().showDialog(
-        "Formatted Export (Pulse+)",
-        `Exporting formatted ${format.toUpperCase()} files is a TwentiFi Pulse+ perk. Upgrade to unlock all data export formats.`,
+        "Formatted Export (Pro)",
+        `Exporting formatted ${format.toUpperCase()} files is a TwentiFi Pro perk. Upgrade to unlock all data export formats.`,
         [
           {
-            text: "Upgrade to Pulse+ ✨",
+            text: "Upgrade to Pro ✨",
             style: "default",
             onPress: () => router.push("/membership" as any),
           },
@@ -252,27 +250,27 @@ export default function SettingsScreen() {
         <SettingCard t={t}>
           <View className="flex-row justify-between items-center mb-2">
             <View className="flex-row items-center">
-              <Ionicons name="sparkles" size={16} color={isPulsePlus ? t.colors.green : t.colors.subtext} />
+              <Ionicons name="sparkles" size={16} color={isPro ? t.colors.green : t.colors.subtext} />
               <Text
                 style={{ fontFamily: "Inter_600SemiBold", fontSize: 15 }}
                 className={`${t.textPrimary} ml-2`}
               >
-                {isPulsePlus ? "TwentiFi Pulse+" : "Standard Pulse"}
+                {isPro ? "TwentiFi Pro" : "Free Standard"}
               </Text>
             </View>
             <View
               className={`px-2 py-0.5 rounded-[2px] border ${t.border}`}
-              style={{ backgroundColor: isPulsePlus ? t.colors.greenLight : t.colors.bg }}
+              style={{ backgroundColor: isPro ? t.colors.greenLight : t.colors.bg }}
             >
               <Text
                 style={{
                   fontFamily: "Inter_600SemiBold",
                   fontSize: 9,
                   letterSpacing: 1,
-                  color: isPulsePlus ? t.colors.text : t.colors.subtext,
+                  color: isPro ? t.colors.text : t.colors.subtext,
                 }}
               >
-                {isPulsePlus ? (billingCycle === 'monthly' ? "MONTHLY" : "ANNUAL") : "FREE PLAN"}
+                {isPro ? (billingCycle === 'monthly' ? "MONTHLY" : "ANNUAL") : "FREE PLAN"}
               </Text>
             </View>
           </View>
@@ -281,12 +279,12 @@ export default function SettingsScreen() {
             style={{ fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 18 }}
             className={`${t.textSubtle} mb-4`}
           >
-            {isPulsePlus
-              ? "Zero-setup managed AI, unlimited roadmaps, unlimited project categories, and deep coaching active."
-              : "Basic local-first logging. Upgrade to unlock managed cloud AI, unlimited roadmaps, and deep coaching."}
+            {isPro
+              ? "Automated daily dockets, unlimited roadmaps, project categorization, and focus coaching active."
+              : "Basic local-first logging. Upgrade to Pro for automated schedule blueprints, unlimited roadmaps, and deep coaching."}
           </Text>
 
-          {!isPulsePlus ? (
+          {!isPro ? (
             <TouchableOpacity
               onPress={() => router.push("/membership" as any)}
               className="rounded-[4px] py-3 px-4 items-center justify-center"
@@ -301,7 +299,7 @@ export default function SettingsScreen() {
                   color: t.isDark ? '#1A1A1A' : '#FFFFFF',
                 }}
               >
-                UPGRADE TO PULSE+ →
+                UPGRADE TO TWENTIFI PRO →
               </Text>
             </TouchableOpacity>
           ) : (
@@ -319,33 +317,10 @@ export default function SettingsScreen() {
                   color: t.colors.text,
                 }}
               >
-                MANAGE SUBSCRIPTION
+                MANAGE MEMBERSHIP
               </Text>
             </TouchableOpacity>
           )}
-
-          {/* Sandbox Toggle for testing */}
-          <View
-            className={`mt-4 pt-3 border-t flex-row items-center justify-between`}
-            style={{ borderColor: t.colors.border }}
-          >
-            <View className="flex-row items-center">
-              <Ionicons name="construct-outline" size={14} color={t.colors.subtext} />
-              <Text
-                style={{ fontFamily: "Inter_400Regular", fontSize: 11 }}
-                className={`${t.textSubtle} ml-1.5`}
-              >
-                Developer Sandbox Mode
-              </Text>
-            </View>
-            <Switch
-              trackColor={{ false: t.colors.border, true: t.colors.green }}
-              thumbColor="#fff"
-              onValueChange={toggleDeveloperSandbox}
-              value={isDeveloperSandbox}
-              style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
-            />
-          </View>
         </SettingCard>
 
         {/* ── PROFILE ──────────────────────────────────────────────────────── */}
@@ -383,7 +358,7 @@ export default function SettingsScreen() {
         <SettingCard t={t}>
           <SettingRow icon="sparkles-outline" label="Gemini AI API Key" t={t} />
           
-          {isPulsePlus ? (
+          {isPro ? (
             <View
               className={`border ${t.border} rounded-[4px] p-3 mt-2.5`}
               style={{ backgroundColor: t.colors.bg }}
@@ -401,7 +376,7 @@ export default function SettingsScreen() {
                 style={{ fontFamily: "Inter_400Regular", fontSize: 11, lineHeight: 16 }}
                 className={t.textSubtle}
               >
-                As a Pulse+ member, your voice transcriptions and AI coaching are handled automatically by our server. No API key needed.
+                As a TwentiFi Pro member, your voice transcriptions and AI coaching are handled automatically by our server. No API key needed.
               </Text>
             </View>
           ) : (
@@ -702,9 +677,9 @@ export default function SettingsScreen() {
                 Formatted Exports
               </Text>
             </View>
-            <View className={`px-2 py-0.5 rounded-[2px] border ${t.border}`} style={{ backgroundColor: isPulsePlus ? t.colors.greenLight : t.colors.bg }}>
-              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 9, letterSpacing: 1, color: isPulsePlus ? t.colors.text : t.colors.subtext }}>
-                {isPulsePlus ? "PULSE+ UNLOCKED" : "PULSE+"}
+            <View className={`px-2 py-0.5 rounded-[2px] border ${t.border}`} style={{ backgroundColor: isPro ? t.colors.greenLight : t.colors.bg }}>
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 9, letterSpacing: 1, color: isPro ? t.colors.text : t.colors.subtext }}>
+                {isPro ? "PRO UNLOCKED" : "PRO"}
               </Text>
             </View>
           </View>
@@ -716,33 +691,33 @@ export default function SettingsScreen() {
           <View className="flex-row gap-2">
             <TouchableOpacity
               onPress={() => exportFormatted('markdown')}
-              className={`flex-1 py-2.5 px-2 rounded-[4px] border ${t.border} items-center`}
+              className={`flex-1 h-10 px-2 rounded-[4px] border ${t.border} items-center justify-center`}
               style={{ backgroundColor: t.colors.bg }}
               activeOpacity={0.75}
             >
-              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: t.colors.text }}>
-                MARKDOWN (.md)
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: t.colors.text }} numberOfLines={1}>
+                MARKDOWN
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => exportFormatted('csv')}
-              className={`flex-1 py-2.5 px-2 rounded-[4px] border ${t.border} items-center`}
+              className={`flex-1 h-10 px-2 rounded-[4px] border ${t.border} items-center justify-center`}
               style={{ backgroundColor: t.colors.bg }}
               activeOpacity={0.75}
             >
-              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: t.colors.text }}>
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: t.colors.text }} numberOfLines={1}>
                 CSV SHEET
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => exportFormatted('notion')}
-              className={`flex-1 py-2.5 px-2 rounded-[4px] border ${t.border} items-center`}
+              className={`flex-1 h-10 px-2 rounded-[4px] border ${t.border} items-center justify-center`}
               style={{ backgroundColor: t.colors.bg }}
               activeOpacity={0.75}
             >
-              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: t.colors.text }}>
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: t.colors.text }} numberOfLines={1}>
                 NOTION JSON
               </Text>
             </TouchableOpacity>

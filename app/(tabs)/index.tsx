@@ -46,7 +46,7 @@ export default function HomeScreen() {
     reorderGoals,
   } = useSessionStore();
   const { userName, startOfDay, endOfDay, geminiApiKey } = useSettingsStore();
-  const { isPulsePlus, incrementAiExpansion, showGatedDialog } = useMembership();
+  const { isPro, incrementAiExpansion, showGatedDialog } = useMembership();
   const t = useTheme();
 
   const [newGoal, setNewGoal] = useState("");
@@ -62,7 +62,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const lapStartOffset = useRef(0);
 
-  // ── Milestone store ────────────────────────────────────────────────────────
+  // ── Milestone store & overall progress calculation ─────────────────────────
   const { milestones, finalizeSession } = useMilestoneStore();
   const activeMilestones = milestones.filter((m) => !m.isCompleted);
 
@@ -78,13 +78,30 @@ export default function HomeScreen() {
       ]
     : [];
 
-  // Overall progress ring = completed / total across ALL active milestones
-  const totalAllTasks = activeMilestones.reduce((s, m) => s + m.tasks.length, 0);
-  const doneAllTasks = activeMilestones.reduce(
-    (s, m) => s + m.tasks.filter((tk) => tk.status === "completed").length,
-    0
+  // Overall progress ring: accurately reflects tasks completed + milestones achieved
+  // Completed milestones remain counted so finishing a milestone fills the ring towards 100%
+  const { totalUnits, completedUnits } = milestones.reduce(
+    (acc, m) => {
+      const taskCount = m.tasks.length;
+      if (m.isCompleted) {
+        const weight = Math.max(1, taskCount);
+        return {
+          totalUnits: acc.totalUnits + weight,
+          completedUnits: acc.completedUnits + weight,
+        };
+      } else {
+        const doneTasks = m.tasks.filter((tk) => tk.status === "completed").length;
+        const weight = Math.max(1, taskCount);
+        return {
+          totalUnits: acc.totalUnits + weight,
+          completedUnits: acc.completedUnits + doneTasks,
+        };
+      }
+    },
+    { totalUnits: 0, completedUnits: 0 }
   );
-  const overallProgress = totalAllTasks > 0 ? doneAllTasks / totalAllTasks : 0;
+
+  const overallProgress = totalUnits > 0 ? completedUnits / totalUnits : 0;
   const ringOffset = CIRCUMFERENCE * (1 - overallProgress);
 
   React.useEffect(() => {
@@ -191,10 +208,10 @@ export default function HomeScreen() {
         text: "Expand with AI ✨",
         style: "default",
         onPress: async () => {
-          if (!geminiApiKey && !isPulsePlus) {
+          if (!geminiApiKey && !isPro) {
             useDialogStore.getState().showDialog(
               "API Key Required",
-              "Add your Gemini API key in Settings to use AI expansion, or upgrade to TwentiFi Pulse+ for zero-setup cloud AI."
+              "Add your Gemini API key in Settings to use AI expansion, or upgrade to TwentiFi Pro for zero-setup cloud AI."
             );
             return;
           }
@@ -203,7 +220,7 @@ export default function HomeScreen() {
           if (!canProceed) {
             showGatedDialog(
               "Daily AI Quota Reached",
-              "You have used your 3 daily AI goal expansions on Standard Pulse. Upgrade to TwentiFi Pulse+ for unlimited AI expansions."
+              "You have used your 3 daily AI goal expansions on the free tier. Upgrade to TwentiFi Pro for unlimited AI expansions."
             );
             return;
           }
@@ -307,7 +324,11 @@ export default function HomeScreen() {
                     origin={`${RING_SIZE / 2}, ${RING_SIZE / 2}`}
                   />
                 </Svg>
-                <Ionicons name="flag-outline" size={16} color={t.colors.text} />
+                <Ionicons
+                  name={overallProgress === 1 && totalUnits > 0 ? "flag" : "flag-outline"}
+                  size={16}
+                  color={overallProgress === 1 && totalUnits > 0 ? t.colors.green : t.colors.text}
+                />
               </TouchableOpacity>
 
               {/* Settings button */}

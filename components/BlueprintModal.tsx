@@ -44,7 +44,7 @@ export default function BlueprintModal({
 }: BlueprintModalProps) {
   const t = useTheme();
   const { startOfDay, endOfDay, geminiApiKey } = useSettingsStore();
-  const { isPulsePlus } = useMembership();
+  const { isPro } = useMembership();
   const { milestones } = useMilestoneStore();
   const { items: currentDocket, commitBlueprint } = useScheduleStore();
 
@@ -69,28 +69,30 @@ export default function BlueprintModal({
         // Clone current docket for rebalancing
         setDraftItems(currentDocket.map((item) => ({ ...item })));
       } else {
-        // Create an initial template based on user's workday
-        const baseItems: ScheduleItem[] = [
-          {
-            id: genId(),
-            title: "Morning Planning & Review",
-            startTime: startOfDay || "09:00",
-            endTime: calculateEndTime(startOfDay || "09:00", 30),
-            durationMinutes: 30,
-            category: "focus",
-            isCompleted: false,
-          },
-          {
-            id: genId(),
-            title: "Core Priority Sprint",
-            startTime: calculateEndTime(startOfDay || "09:00", 30),
-            endTime: calculateEndTime(calculateEndTime(startOfDay || "09:00", 30), 90),
-            durationMinutes: 90,
-            category: "target",
-            isCompleted: false,
-          },
-        ];
-        setDraftItems(cascadeScheduleItems(baseItems));
+        // Dynamically pre-populate from real active target milestones and daily habits
+        const active = milestones.filter((m) => !m.isCompleted);
+        if (active.length > 0) {
+          const start = startOfDay || "09:00";
+          const synthesized: ScheduleItem[] = active.slice(0, 3).map((m) => {
+            const pendingTask = m.tasks.find((t) => t.status !== "completed");
+            const title = pendingTask
+              ? `${m.title}: ${pendingTask.text}`
+              : m.title;
+            return {
+              id: genId(),
+              title,
+              startTime: "00:00",
+              endTime: "00:00",
+              durationMinutes: m.type === "habit" ? 30 : 60,
+              category: m.type === "habit" ? "habit" : "target",
+              milestoneId: m.id,
+              isCompleted: false,
+            };
+          });
+          setDraftItems(cascadeScheduleItems(synthesized, start));
+        } else {
+          setDraftItems([]);
+        }
       }
     }
   }, [visible, initialMode]);
@@ -125,10 +127,10 @@ export default function BlueprintModal({
   const handleGenerateAI = async (overridePrompt?: string) => {
     const effectivePrompt = (overridePrompt ?? promptText).trim();
 
-    if (!geminiApiKey && !isPulsePlus) {
+    if (!geminiApiKey && !isPro) {
       useDialogStore.getState().showDialog(
         "Gemini Key Required",
-        "Add your Gemini API key in Settings or upgrade to Pulse+ to use AI Blueprint generation."
+        "Add your Gemini API key in Settings or upgrade to TwentiFi Pro to use AI Blueprint generation."
       );
       return;
     }
@@ -208,30 +210,18 @@ export default function BlueprintModal({
           isCompleted: false,
         });
       });
-    } else {
-      synthesized.push({
-        id: genId(),
-        title: "Deep Work Sprint",
-        startTime: "00:00",
-        endTime: "00:00",
-        durationMinutes: 90,
-        category: "target",
-        isCompleted: false,
-      });
-      synthesized.push({
-        id: genId(),
-        title: "Health & Habit Reset",
-        startTime: "00:00",
-        endTime: "00:00",
-        durationMinutes: 45,
-        category: "habit",
-        isCompleted: false,
-      });
-    }
 
-    const cascaded = cascadeScheduleItems(synthesized, start);
-    setDraftItems(cascaded);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const cascaded = cascadeScheduleItems(synthesized, start);
+      setDraftItems(cascaded);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      useDialogStore
+        .getState()
+        .showDialog(
+          "No Active Milestones",
+          "You have no uncompleted milestones yet. Create your first milestone in the Milestones tab or describe your day in the text box above."
+        );
+    }
   };
 
   // Reorder helper (move up / down)
@@ -240,17 +230,20 @@ export default function BlueprintModal({
     if (targetIndex < 0 || targetIndex >= draftItems.length) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Anchor to the true original start time so reordering top item never shifts day baseline
+    const baseStart = draftItems[0]?.startTime || startOfDay || "09:00";
     const updated = [...draftItems];
     const [moved] = updated.splice(index, 1);
     updated.splice(targetIndex, 0, moved);
 
-    const cascaded = cascadeScheduleItems(updated);
+    const cascaded = cascadeScheduleItems(updated, baseStart);
     setDraftItems(cascaded);
   };
 
   // Adjust duration (+15m or -15m)
   const adjustDuration = (index: number, delta: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const baseStart = draftItems[0]?.startTime || startOfDay || "09:00";
     const updated = draftItems.map((item, i) => {
       if (i !== index) return item;
       const newDuration = Math.max(15, (item.durationMinutes || 30) + delta);
@@ -259,7 +252,7 @@ export default function BlueprintModal({
         durationMinutes: newDuration,
       };
     });
-    setDraftItems(cascadeScheduleItems(updated));
+    setDraftItems(cascadeScheduleItems(updated, baseStart));
   };
 
   // Cycle category (habit -> target -> focus -> habit)
@@ -278,8 +271,9 @@ export default function BlueprintModal({
   // Delete item
   const deleteItem = (index: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const baseStart = draftItems[0]?.startTime || startOfDay || "09:00";
     const updated = draftItems.filter((_, i) => i !== index);
-    setDraftItems(cascadeScheduleItems(updated));
+    setDraftItems(cascadeScheduleItems(updated, baseStart));
   };
 
   // Add custom manual item
@@ -287,6 +281,7 @@ export default function BlueprintModal({
     if (!newTitle.trim()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
+    const baseStart = draftItems[0]?.startTime || startOfDay || "09:00";
     const newItem: ScheduleItem = {
       id: genId(),
       title: newTitle.trim(),
@@ -297,7 +292,7 @@ export default function BlueprintModal({
       isCompleted: false,
     };
 
-    const cascaded = cascadeScheduleItems([...draftItems, newItem]);
+    const cascaded = cascadeScheduleItems([...draftItems, newItem], baseStart);
     setDraftItems(cascaded);
     setNewTitle("");
   };
@@ -333,18 +328,52 @@ export default function BlueprintModal({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      transparent={true}
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        className={`flex-1 ${t.bg}`}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "rgba(0,0,0,0.6)",
+          justifyContent: "flex-end",
+        }}
       >
-        {/* ── Sheet Header ────────────────────────────────────────────── */}
-        <View
-          className="flex-row items-center justify-between px-6 pt-5 pb-4 border-b"
-          style={{ borderBottomColor: t.colors.border }}
+        <TouchableOpacity
+          style={{ flex: 1 }}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{
+            maxHeight: "92%",
+            height: "90%",
+            backgroundColor: t.colors.bg,
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            overflow: "hidden",
+            borderWidth: 1,
+            borderColor: t.colors.border,
+            borderBottomWidth: 0,
+          }}
         >
+          {/* Top Dock Handle */}
+          <View style={{ alignItems: "center", paddingTop: 8, paddingBottom: 4 }}>
+            <View
+              style={{
+                width: 36,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: t.colors.border,
+              }}
+            />
+          </View>
+
+          {/* ── Sheet Header ────────────────────────────────────────────── */}
+          <View
+            className="flex-row items-center justify-between px-6 pt-2 pb-4 border-b"
+            style={{ borderBottomColor: t.colors.border }}
+          >
           <View className="flex-row items-center gap-2">
             <View
               className="w-7 h-7 rounded-[4px] items-center justify-center"
@@ -414,9 +443,7 @@ export default function BlueprintModal({
                   letterSpacing: 0.5,
                   color:
                     mode === "tomorrow"
-                      ? t.isDark
-                        ? "#0D0B1F"
-                        : "#FAFAF8"
+                      ? t.colors.bg
                       : t.colors.subtext,
                 }}
               >
@@ -439,9 +466,7 @@ export default function BlueprintModal({
                   letterSpacing: 0.5,
                   color:
                     mode === "today"
-                      ? t.isDark
-                        ? "#0D0B1F"
-                        : "#FAFAF8"
+                      ? t.colors.bg
                       : t.colors.subtext,
                 }}
               >
@@ -503,14 +528,14 @@ export default function BlueprintModal({
                 {isGenerating ? (
                   <ActivityIndicator
                     size="small"
-                    color={t.isDark ? "#0D0B1F" : "#FAFAF8"}
+                    color={t.colors.bg}
                   />
                 ) : (
                   <>
                     <Ionicons
                       name="sparkles"
                       size={13}
-                      color={t.isDark ? "#0D0B1F" : "#FAFAF8"}
+                      color={t.colors.bg}
                       style={{ marginRight: 6 }}
                     />
                     <Text
@@ -518,7 +543,7 @@ export default function BlueprintModal({
                         fontFamily: "Inter_700Bold",
                         fontSize: 11,
                         letterSpacing: 1,
-                        color: t.isDark ? "#0D0B1F" : "#FAFAF8",
+                        color: t.colors.bg,
                       }}
                       className="uppercase"
                     >
@@ -818,9 +843,7 @@ export default function BlueprintModal({
                   fontSize: 10,
                   letterSpacing: 1,
                   color: newTitle.trim()
-                    ? t.isDark
-                      ? "#0D0B1F"
-                      : "#FAFAF8"
+                    ? t.colors.bg
                     : t.colors.subtext,
                 }}
                 className="uppercase"
@@ -843,7 +866,7 @@ export default function BlueprintModal({
             {isCommitting ? (
               <ActivityIndicator
                 size="small"
-                color={t.isDark ? "#0D0B1F" : "#FAFAF8"}
+                color={t.colors.bg}
               />
             ) : (
               <>
@@ -852,9 +875,7 @@ export default function BlueprintModal({
                   size={16}
                   color={
                     draftItems.length > 0
-                      ? t.isDark
-                        ? "#0D0B1F"
-                        : "#FAFAF8"
+                      ? t.colors.bg
                       : t.colors.subtext
                   }
                   style={{ marginRight: 8 }}
@@ -866,9 +887,7 @@ export default function BlueprintModal({
                     letterSpacing: 1.5,
                     color:
                       draftItems.length > 0
-                        ? t.isDark
-                          ? "#0D0B1F"
-                          : "#FAFAF8"
+                        ? t.colors.bg
                         : t.colors.subtext,
                   }}
                   className="uppercase"
@@ -880,6 +899,7 @@ export default function BlueprintModal({
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }

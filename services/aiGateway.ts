@@ -25,15 +25,15 @@ export interface WeeklyTrendInsights {
 
 /**
  * Resolves the effective API key or managed credentials based on membership tier.
- * Returns `isManaged: true` only when a valid key was actually resolved for Pulse+ members.
+ * Returns `isManaged: true` only when a valid key was actually resolved for Pro members.
  */
 function getEffectiveKey(): { apiKey: string; isManaged: boolean } {
   const { tier } = useMembershipStore.getState();
   const { geminiApiKey } = useSettingsStore.getState();
 
-  const isPulsePlus = tier === 'pulse_plus';
+  const isPro = tier === 'pro' || tier === 'pulse_plus';
 
-  if (isPulsePlus) {
+  if (isPro) {
     // Prefer personal key, then managed env key (strips undefined/empty)
     const effectiveKey =
       (geminiApiKey && geminiApiKey.trim()) ||
@@ -53,7 +53,7 @@ function getEffectiveKey(): { apiKey: string; isManaged: boolean } {
 export async function transcribeAudio(audioUri: string): Promise<string> {
   const { apiKey, isManaged } = getEffectiveKey();
   if (!apiKey && !isManaged) {
-    throw new Error('Gemini API key required on Standard Pulse. Add it in Settings or upgrade to Pulse+ for zero-setup cloud AI.');
+    throw new Error('Gemini API key required on Free Standard. Add it in Settings or upgrade to TwentiFi Pro for zero-setup cloud AI.');
   }
   return await transcribeWithGemini(audioUri, apiKey);
 }
@@ -64,7 +64,7 @@ export async function transcribeAudio(audioUri: string): Promise<string> {
 export async function expandTask(task: string): Promise<string[]> {
   const { apiKey, isManaged } = getEffectiveKey();
   if (!apiKey && !isManaged) {
-    throw new Error('Gemini API key required on Standard Pulse. Add it in Settings or upgrade to Pulse+ for zero-setup cloud AI.');
+    throw new Error('Gemini API key required on Free Standard. Add it in Settings or upgrade to TwentiFi Pro for zero-setup cloud AI.');
   }
   return await expandTaskWithGemini(task, apiKey);
 }
@@ -100,7 +100,7 @@ export async function generateMilestoneRoadmap(
 ): Promise<string[]> {
   const { apiKey, isManaged } = getEffectiveKey();
   if (!apiKey && !isManaged) {
-    throw new Error('Gemini API key required on Standard Pulse. Add it in Settings or upgrade to Pulse+ for zero-setup cloud AI.');
+    throw new Error('Gemini API key required on Free Standard. Add it in Settings or upgrade to TwentiFi Pro for zero-setup cloud AI.');
   }
   return await generateMilestonePlan(title, description, deadline, apiKey);
 }
@@ -118,7 +118,7 @@ export async function generateScheduleBlueprint(params: {
 }): Promise<RawSchedulePlanItem[]> {
   const { apiKey, isManaged } = getEffectiveKey();
   if (!apiKey && !isManaged) {
-    throw new Error('Gemini API key required on Standard Pulse. Add it in Settings or upgrade to Pulse+ for zero-setup cloud AI.');
+    throw new Error('Gemini API key required on Free Standard. Add it in Settings or upgrade to TwentiFi Pro for zero-setup cloud AI.');
   }
   return await generateScheduleBlueprintWithGemini(params, apiKey);
 }
@@ -139,7 +139,7 @@ export async function fetchDailyQuote(): Promise<{ quote: string; author: string
 }
 
 /**
- * Weekly & Multi-Day Behavioral Trend Coaching Engine (Pulse+ Exclusive)
+ * Weekly & Multi-Day Behavioral Trend Coaching Engine (TwentiFi Pro Exclusive)
  */
 export async function generateWeeklyTrendInsights(logs: LogEntry[]): Promise<WeeklyTrendInsights> {
   const { apiKey } = getEffectiveKey();
@@ -244,7 +244,7 @@ export async function generateWeeklyTrendInsights(logs: LogEntry[]): Promise<Wee
 }
 
 /**
- * Data Export Generator (Markdown, CSV, Notion-Ready JSON) - Pulse+ Exclusive
+ * Data Export Generator (Markdown, CSV, Notion-Ready JSON) - TwentiFi Pro Exclusive
  */
 export function generateFormattedExport(logs: LogEntry[], format: 'markdown' | 'csv' | 'notion'): string {
   if (format === 'csv') {

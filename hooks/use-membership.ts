@@ -8,16 +8,16 @@ export function useMembership() {
     tier,
     billingCycle,
     subscriptionExpiresAt,
-    isDeveloperSandbox,
+    licenseKey,
     dailyAiExpansionsUsed,
-    upgradeToPulsePlus,
+    upgradeToPro,
     downgradeToBasic,
-    toggleDeveloperSandbox,
+    activateLicenseKey,
     incrementAiExpansion,
     resetQuotasIfNewDay,
   } = useMembershipStore();
 
-  const isPulsePlus = tier === 'pulse_plus';
+  const isPro = tier === 'pro' || tier === 'pulse_plus';
 
   const showPaywall = () => {
     router.push('/membership' as any);
@@ -29,7 +29,7 @@ export function useMembership() {
       featureDesc,
       [
         {
-          text: 'Upgrade to Pulse+ ✨',
+          text: 'Upgrade to Pro ✨',
           style: 'default',
           onPress: () => {
             router.push('/membership' as any);
@@ -41,25 +41,25 @@ export function useMembership() {
   };
 
   return {
-    isPulsePlus,
+    isPro,
     tier,
     billingCycle,
     subscriptionExpiresAt,
-    isDeveloperSandbox,
-    tierName: isPulsePlus ? 'TwentiFi Pulse+' : 'Standard Pulse',
-    requiresApiKey: !isPulsePlus,
+    licenseKey,
+    tierName: isPro ? 'TwentiFi Pro' : 'Free Standard',
+    requiresApiKey: !isPro,
     dailyAiExpansionsUsed,
-    remainingExpansions: isPulsePlus ? Infinity : Math.max(0, BASIC_DAILY_AI_EXPANSION_LIMIT - dailyAiExpansionsUsed),
+    remainingExpansions: isPro ? Infinity : Math.max(0, BASIC_DAILY_AI_EXPANSION_LIMIT - dailyAiExpansionsUsed),
     
     // Feature gating checks
-    canCreateMilestone: (currentActiveCount: number) => isPulsePlus || currentActiveCount < BASIC_ACTIVE_ROADMAP_LIMIT,
-    canCreateGroup: (currentGroupCount: number) => isPulsePlus || currentGroupCount < BASIC_PROJECT_GROUP_LIMIT,
-    canExpandTask: () => isPulsePlus || dailyAiExpansionsUsed < BASIC_DAILY_AI_EXPANSION_LIMIT,
+    canCreateMilestone: (currentActiveCount: number) => isPro || currentActiveCount < BASIC_ACTIVE_ROADMAP_LIMIT,
+    canCreateGroup: (currentGroupCount: number) => isPro || currentGroupCount < BASIC_PROJECT_GROUP_LIMIT,
+    canExpandTask: () => isPro || dailyAiExpansionsUsed < BASIC_DAILY_AI_EXPANSION_LIMIT,
 
     // Actions & Triggers
-    upgradeToPulsePlus,
+    upgradeToPro,
     downgradeToBasic,
-    toggleDeveloperSandbox,
+    activateLicenseKey,
     incrementAiExpansion,
     resetQuotasIfNewDay,
     showPaywall,

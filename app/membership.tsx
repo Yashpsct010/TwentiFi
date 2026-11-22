@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  TextInput,
   Linking,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -13,28 +14,66 @@ import { useTheme } from '@/hooks/use-theme';
 import { useMembership } from '@/hooks/use-membership';
 import { useDialogStore } from '@/store/dialogStore';
 
-const PERKS = [
-  'Zero-Setup Managed AI (No Gemini API Key Needed)',
-  'Unlimited AI Goal Expansions & Subtask Breakdowns',
+const PRO_PERKS = [
+  'Voice-to-Insight Journaling (Direct Gemini Stream)',
+  'Automated Daily Dockets & AI Blueprint Studio',
+  'Weekly Behavioral Coaching & Focus Trends',
   'Unlimited Active Milestones & Habit Roadmaps',
-  'Unlimited Project Categories & Custom Grouping',
-  'Multi-Day Behavioral Trend Coaching & Deep Insights',
-  'Encrypted Cloud Backup & Markdown/CSV Data Exports',
-  'Exclusive Editorial Theme Palettes & Streak Rescues',
+  'Full Data Portability (Markdown & CSV Exports)',
+  'Zero Advertising, Zero External Trackers',
 ];
 
 export default function MembershipModal() {
   const router = useRouter();
   const t = useTheme();
-  const { isPulsePlus, billingCycle, upgradeToPulsePlus, downgradeToBasic } = useMembership();
+  const {
+    isPro,
+    billingCycle,
+    licenseKey,
+    upgradeToPro,
+    downgradeToBasic,
+    activateLicenseKey,
+  } = useMembership();
+
+  const [inputKey, setInputKey] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<'annual' | 'monthly'>('annual');
 
-  const handleSubscribe = () => {
+  const handleActivateKey = () => {
+    if (!inputKey.trim()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    upgradeToPulsePlus(selectedPlan);
+
+    const success = activateLicenseKey(inputKey);
+    if (success) {
+      useDialogStore.getState().showDialog(
+        'License Activated ✨',
+        'TwentiFi Pro has been successfully unlocked on your device.',
+        [
+          {
+            text: 'Continue',
+            style: 'default',
+            onPress: () => router.back(),
+          },
+        ]
+      );
+    } else {
+      useDialogStore.getState().showDialog(
+        'Invalid Key',
+        'Please enter a valid license key or check the format.'
+      );
+    }
+  };
+
+  const handleOpenSupporterLink = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Linking.openURL('https://twentifi.app/#download').catch(() => {});
+  };
+
+  const handleUnlockProDirect = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    upgradeToPro(selectedPlan);
     useDialogStore.getState().showDialog(
-      'Welcome to Pulse+ ✨',
-      'You have successfully unlocked TwentiFi Pulse+. Enjoy zero-setup managed AI, unlimited roadmaps, and deep behavioral coaching.',
+      'Welcome to TwentiFi Pro ✨',
+      'You have unlocked all Pro capabilities including unlimited roadmaps, AI blueprint generation, and behavioral trend coaching.',
       [
         {
           text: 'Get Started',
@@ -48,8 +87,8 @@ export default function MembershipModal() {
   const handleDowngrade = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     useDialogStore.getState().showDialog(
-      'Switch to Standard Pulse?',
-      'You will switch to the free Standard Pulse plan. Active roadmaps over 2 will remain preserved but new creations will be capped.',
+      'Switch to Free Plan?',
+      'You will switch back to the free standard tier. Existing roadmaps remain saved.',
       [
         {
           text: 'Switch to Free',
@@ -59,16 +98,8 @@ export default function MembershipModal() {
             router.back();
           },
         },
-        { text: 'Keep Pulse+', style: 'cancel' },
+        { text: 'Keep Pro', style: 'cancel' },
       ]
-    );
-  };
-
-  const handleRestore = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    useDialogStore.getState().showDialog(
-      'Purchases Restored',
-      'Your subscription status is up to date.'
     );
   };
 
@@ -110,17 +141,17 @@ export default function MembershipModal() {
           </TouchableOpacity>
           <View
             className={`px-2.5 py-1 rounded-[4px] border ${t.border}`}
-            style={{ backgroundColor: isPulsePlus ? t.colors.greenLight : t.colors.card }}
+            style={{ backgroundColor: isPro ? t.colors.greenLight : t.colors.card }}
           >
             <Text
               style={{
                 fontFamily: 'Inter_600SemiBold',
                 fontSize: 10,
                 letterSpacing: 1.5,
-                color: isPulsePlus ? t.colors.text : t.colors.subtext,
+                color: isPro ? t.colors.text : t.colors.subtext,
               }}
             >
-              {isPulsePlus ? 'ACTIVE MEMBER' : 'PULSE+'}
+              {isPro ? 'PRO ACTIVE' : 'FREE TIER'}
             </Text>
           </View>
         </View>
@@ -130,22 +161,22 @@ export default function MembershipModal() {
           style={{ fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 2 }}
           className={`${t.textSubtle} uppercase mb-1`}
         >
-          Membership
+          Upgrade
         </Text>
         <Text
           style={{ fontFamily: 'Inter_700Bold', fontSize: 28, letterSpacing: -0.5 }}
           className={`${t.textPrimary} mb-2`}
         >
-          TwentiFi Pulse+
+          TwentiFi Pro
         </Text>
         <Text
           style={{ fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 22 }}
           className={`${t.textSubtle} mb-6`}
         >
-          Elevate your daily rhythm with zero-setup managed AI, unlimited roadmaps, project categorization, and behavioral coaching.
+          Deep focus without friction. Unlock automated schedule synthesis, unlimited active milestones, and weekly behavioral trends.
         </Text>
 
-        {/* Perks Card (Level 1 Tonal Nesting) */}
+        {/* Perks Card */}
         <View
           className={`border ${t.border} rounded-[4px] p-5 mb-6`}
           style={{ backgroundColor: t.colors.card }}
@@ -154,9 +185,9 @@ export default function MembershipModal() {
             style={{ fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 2 }}
             className={`${t.textSubtle} uppercase mb-4`}
           >
-            Included Perks
+            What's Included
           </Text>
-          {PERKS.map((perk, idx) => (
+          {PRO_PERKS.map((perk, idx) => (
             <View key={idx} className="flex-row items-start mb-3">
               <Ionicons
                 name="checkmark-circle"
@@ -174,22 +205,71 @@ export default function MembershipModal() {
           ))}
         </View>
 
-        {/* Plan Selector (Only if not already subscribed) */}
-        {!isPulsePlus ? (
+        {!isPro ? (
           <>
+            {/* Activation via License Key */}
+            <View
+              className={`border ${t.border} rounded-[4px] p-4 mb-5`}
+              style={{ backgroundColor: t.colors.card }}
+            >
+              <Text
+                style={{ fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 1.5 }}
+                className={`${t.textSubtle} uppercase mb-2`}
+              >
+                Have a License Key?
+              </Text>
+              <TextInput
+                value={inputKey}
+                onChangeText={setInputKey}
+                placeholder="e.g. TWENTIFI-PRO-XXXX"
+                placeholderTextColor={t.colors.subtext}
+                autoCapitalize="characters"
+                style={{
+                  fontFamily: 'Inter_600SemiBold',
+                  fontSize: 13,
+                  color: t.colors.text,
+                  backgroundColor: t.colors.bg,
+                  borderColor: t.colors.border,
+                  borderWidth: 1,
+                  borderRadius: 4,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  marginBottom: 10,
+                }}
+              />
+              <TouchableOpacity
+                onPress={handleActivateKey}
+                disabled={!inputKey.trim()}
+                className="rounded-[4px] py-2.5 px-3 items-center justify-center border"
+                style={{
+                  backgroundColor: inputKey.trim() ? t.colors.text : t.colors.bg,
+                  borderColor: t.colors.border,
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: 'Inter_700Bold',
+                    fontSize: 11,
+                    letterSpacing: 1,
+                    color: inputKey.trim() ? t.colors.bg : t.colors.subtext,
+                  }}
+                  className="uppercase"
+                >
+                  Activate License Key
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Direct Unlock / Supporter Options */}
             <Text
               style={{ fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 2 }}
               className={`${t.textSubtle} uppercase mb-3`}
             >
-              Select Plan
+              Unlock Pro
             </Text>
 
-            {/* Annual Plan Card */}
             <TouchableOpacity
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setSelectedPlan('annual');
-              }}
+              onPress={() => setSelectedPlan('annual')}
               className={`border rounded-[4px] p-4 mb-3`}
               style={{
                 backgroundColor: t.colors.card,
@@ -210,7 +290,7 @@ export default function MembershipModal() {
                     style={{ fontFamily: 'Inter_700Bold', fontSize: 15 }}
                     className={t.textPrimary}
                   >
-                    Annual Membership
+                    Annual Access
                   </Text>
                 </View>
                 <View
@@ -225,7 +305,7 @@ export default function MembershipModal() {
                       color: t.colors.text,
                     }}
                   >
-                    SAVE 45%
+                    BEST VALUE
                   </Text>
                 </View>
               </View>
@@ -237,23 +317,19 @@ export default function MembershipModal() {
                   marginLeft: 24,
                 }}
               >
-                $39.99 / year{' '}
+                $29.99 / year{' '}
                 <Text
                   style={{ fontFamily: 'Inter_400Regular', fontSize: 12 }}
                   className={t.textSubtle}
                 >
-                  ($3.33/mo)
+                  ($2.50/mo)
                 </Text>
               </Text>
             </TouchableOpacity>
 
-            {/* Monthly Plan Card */}
             <TouchableOpacity
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setSelectedPlan('monthly');
-              }}
-              className={`border rounded-[4px] p-4 mb-6`}
+              onPress={() => setSelectedPlan('monthly')}
+              className={`border rounded-[4px] p-4 mb-5`}
               style={{
                 backgroundColor: t.colors.card,
                 borderColor: selectedPlan === 'monthly' ? t.colors.green : t.colors.border,
@@ -272,7 +348,7 @@ export default function MembershipModal() {
                   style={{ fontFamily: 'Inter_700Bold', fontSize: 15 }}
                   className={t.textPrimary}
                 >
-                  Monthly Membership
+                  Monthly Access
                 </Text>
               </View>
               <Text
@@ -283,21 +359,15 @@ export default function MembershipModal() {
                   marginLeft: 24,
                 }}
               >
-                $5.99 / month{' '}
-                <Text
-                  style={{ fontFamily: 'Inter_400Regular', fontSize: 12 }}
-                  className={t.textSubtle}
-                >
-                  (Cancel anytime)
-                </Text>
+                $3.99 / month
               </Text>
             </TouchableOpacity>
 
             {/* Primary Upgrade CTA Button */}
             <TouchableOpacity
-              onPress={handleSubscribe}
-              className="rounded-[4px] p-4 items-center justify-center mb-4"
-              style={{ backgroundColor: t.isDark ? t.colors.text : '#1A1A1A' }}
+              onPress={handleUnlockProDirect}
+              className="rounded-[4px] p-4 items-center justify-center mb-3"
+              style={{ backgroundColor: t.colors.text }}
               activeOpacity={0.85}
             >
               <Text
@@ -305,10 +375,25 @@ export default function MembershipModal() {
                   fontFamily: 'Inter_700Bold',
                   fontSize: 13,
                   letterSpacing: 1.5,
-                  color: t.isDark ? '#1A1A1A' : '#FFFFFF',
+                  color: t.colors.bg,
                 }}
               >
-                UPGRADE TO TWENTIFI PULSE+ →
+                UNLOCK TWENTIFI PRO →
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleOpenSupporterLink}
+              className="py-2.5 items-center justify-center mb-4"
+            >
+              <Text
+                style={{
+                  fontFamily: 'Inter_500Medium',
+                  fontSize: 12,
+                  color: t.colors.green,
+                }}
+              >
+                Learn more or get key on twentifi.app ↗
               </Text>
             </TouchableOpacity>
           </>
@@ -323,19 +408,27 @@ export default function MembershipModal() {
                 style={{ fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 2 }}
                 className={`${t.textSubtle} uppercase mb-1`}
               >
-                Current Plan
+                Current Membership
               </Text>
               <Text
                 style={{ fontFamily: 'Inter_700Bold', fontSize: 16 }}
                 className={`${t.textPrimary} mb-1`}
               >
-                TwentiFi Pulse+ ({billingCycle === 'monthly' ? 'Monthly' : 'Annual'})
+                TwentiFi Pro ({billingCycle === 'monthly' ? 'Monthly' : billingCycle === 'lifetime' ? 'Lifetime' : 'Annual'})
               </Text>
+              {licenseKey && (
+                <Text
+                  style={{ fontFamily: 'Inter_500Medium', fontSize: 11, color: t.colors.green }}
+                  className="mb-1"
+                >
+                  Key: {licenseKey}
+                </Text>
+              )}
               <Text
                 style={{ fontFamily: 'Inter_400Regular', fontSize: 12 }}
                 className={t.textSubtle}
               >
-                All premium cloud AI features and unlimited capacities are active.
+                All Pro features, unlimited dockets, and behavioral coaching are fully active.
               </Text>
             </View>
 
@@ -360,21 +453,12 @@ export default function MembershipModal() {
 
         {/* Footer info */}
         <View className="flex-row justify-center items-center gap-4 mt-2">
-          <TouchableOpacity onPress={handleRestore}>
-            <Text
-              style={{ fontFamily: 'Inter_500Medium', fontSize: 11, letterSpacing: 1 }}
-              className={t.textSubtle}
-            >
-              RESTORE
-            </Text>
-          </TouchableOpacity>
-          <Text className={t.textSubtle}>•</Text>
           <TouchableOpacity onPress={openTerms}>
             <Text
               style={{ fontFamily: 'Inter_500Medium', fontSize: 11, letterSpacing: 1 }}
               className={t.textSubtle}
             >
-              TERMS & PRIVACY
+              TWENTIFI.APP • TERMS & PRIVACY
             </Text>
           </TouchableOpacity>
         </View>

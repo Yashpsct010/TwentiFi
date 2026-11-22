@@ -448,7 +448,7 @@ export default function MilestonesScreen() {
   const t = useTheme();
   const { milestones, deleteMilestone, completeMilestone, reopenMilestone, addMilestone, replaceAllTasks } = useMilestoneStore();
   const { geminiApiKey } = useSettingsStore();
-  const { isPulsePlus, canCreateMilestone, showGatedDialog } = useMembership();
+  const { isPro, canCreateMilestone, showGatedDialog } = useMembership();
 
   const [activeTab, setActiveTab] = useState<"active" | "completed">("active");
   const [showCreate, setShowCreate] = useState(false);
@@ -461,7 +461,7 @@ export default function MilestonesScreen() {
     if (!canCreateMilestone(activeMilestones.length)) {
       showGatedDialog(
         "Roadmap Limit Reached",
-        "Standard Pulse includes up to 2 active habit/target roadmaps. Upgrade to TwentiFi Pulse+ for unlimited active roadmaps and automated AI plans."
+        "Free Standard tier includes up to 2 active habit/target roadmaps. Upgrade to TwentiFi Pro for unlimited active roadmaps and automated AI plans."
       );
       return;
     }
@@ -472,7 +472,7 @@ export default function MilestonesScreen() {
     if (!canCreateMilestone(activeMilestones.length)) {
       showGatedDialog(
         "Roadmap Limit Reached",
-        "Standard Pulse includes up to 2 active habit/target roadmaps. Upgrade to TwentiFi Pulse+ for unlimited active roadmaps and automated AI plans."
+        "Free Standard tier includes up to 2 active habit/target roadmaps. Upgrade to TwentiFi Pro for unlimited active roadmaps and automated AI plans."
       );
       return;
     }
@@ -538,12 +538,12 @@ export default function MilestonesScreen() {
                 fontFamily: "Inter_600SemiBold",
                 fontSize: 10,
                 letterSpacing: 1.5,
-                color: activeTab === tab ? (t.isDark ? "#0D0B1F" : "#FAFAF8") : t.colors.subtext,
+                color: activeTab === tab ? t.colors.bg : t.colors.subtext,
               }}
               className="uppercase"
             >
               {tab === "active"
-                ? `Active (${activeMilestones.length}${!isPulsePlus ? '/2' : ''})`
+                ? `Active (${activeMilestones.length}${!isPro ? '/2' : ''})`
                 : `Done (${completedMilestones.length})`}
             </Text>
           </TouchableOpacity>

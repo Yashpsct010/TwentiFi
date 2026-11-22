@@ -67,11 +67,9 @@ export const calculateEndTime = (startTime: string, durationMinutes: number): st
 export const formatTimeDisplay = (time: string): string => {
   if (!time || !time.includes(":")) return time;
   const [hoursStr, minutesStr] = time.split(":");
-  let hours = parseInt(hoursStr, 10) || 0;
-  const minutes = minutesStr.padStart(2, "0");
-  const ampm = hours >= 12 ? "PM" : "AM";
-  const displayHours = hours % 12 === 0 ? 12 : hours % 12;
-  return `${displayHours}:${minutes} ${ampm}`;
+  const hours = parseInt(hoursStr, 10) || 0;
+  const minutes = (minutesStr || "00").padStart(2, "0");
+  return `${String(hours).padStart(2, "0")}:${minutes}`;
 };
 
 export const formatDuration = (minutes: number): string => {
@@ -188,7 +186,7 @@ export const useScheduleStore = create<ScheduleState>()(
   persist(
     (set, get) => ({
       targetDate: getTodayDateString(),
-      items: createDefaultDocket(),
+      items: [],
 
       addItem: (item) => {
         const id = item.id || genId();
@@ -286,15 +284,13 @@ export const useScheduleStore = create<ScheduleState>()(
       },
 
       reorderSchedule: (newItems) => {
-        // Anchor to the earliest startTime in the CURRENT store items (not the
-        // stale times carried on the dragged items) so reordering never shifts
-        // the docket's first slot later or earlier than intended.
+        // Anchor to the true starting line (first item's original startTime)
+        // so reordering the top item or any other item never shifts the day forward
         const currentItems = get().items;
-        const anchorMinutes =
+        const anchorTime =
           currentItems.length > 0
-            ? Math.min(...currentItems.map((i) => timeToMinutes(i.startTime)))
-            : timeToMinutes(newItems[0]?.startTime ?? "09:00");
-        const anchorTime = minutesToTime(anchorMinutes);
+            ? currentItems[0].startTime
+            : (newItems[0]?.startTime ?? "09:00");
         const cascaded = cascadeScheduleItems(newItems, anchorTime);
         set({ items: cascaded });
       },

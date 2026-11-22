@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type MembershipTier = 'basic' | 'pulse_plus';
+export type MembershipTier = 'basic' | 'pro' | 'pulse_plus';
 export type BillingCycle = 'monthly' | 'annual' | 'lifetime';
 
 export const BASIC_ACTIVE_ROADMAP_LIMIT = 2;
@@ -13,15 +13,15 @@ interface MembershipState {
   tier: MembershipTier;
   billingCycle: BillingCycle | null;
   subscriptionExpiresAt: string | null;
-  isDeveloperSandbox: boolean;
+  licenseKey: string | null;
   dailyAiExpansionsUsed: number;
   lastQuotaResetDate: string;
 
   // Actions
   setTier: (tier: MembershipTier) => void;
-  upgradeToPulsePlus: (cycle?: BillingCycle) => void;
+  upgradeToPro: (cycle?: BillingCycle, license?: string) => void;
   downgradeToBasic: () => void;
-  toggleDeveloperSandbox: () => void;
+  activateLicenseKey: (key: string) => boolean;
   incrementAiExpansion: () => boolean;
   resetQuotasIfNewDay: () => void;
 }
@@ -34,21 +34,23 @@ export const useMembershipStore = create<MembershipState>()(
       tier: 'basic',
       billingCycle: null,
       subscriptionExpiresAt: null,
-      isDeveloperSandbox: false,
+      licenseKey: null,
       dailyAiExpansionsUsed: 0,
       lastQuotaResetDate: getTodayString(),
 
       setTier: (tier) => set({ tier }),
 
-      upgradeToPulsePlus: (cycle = 'annual') => {
+      upgradeToPro: (cycle = 'annual', license) => {
         const nextYear = new Date();
         nextYear.setFullYear(nextYear.getFullYear() + (cycle === 'annual' ? 1 : 0));
         if (cycle === 'monthly') nextYear.setMonth(nextYear.getMonth() + 1);
+        if (cycle === 'lifetime') nextYear.setFullYear(nextYear.getFullYear() + 50);
 
         set({
-          tier: 'pulse_plus',
+          tier: 'pro',
           billingCycle: cycle,
           subscriptionExpiresAt: nextYear.toISOString(),
+          licenseKey: license || get().licenseKey || 'TWENTIFI-PRO-COMMUNITY',
         });
       },
 
@@ -57,15 +59,18 @@ export const useMembershipStore = create<MembershipState>()(
           tier: 'basic',
           billingCycle: null,
           subscriptionExpiresAt: null,
+          licenseKey: null,
         });
       },
 
-      toggleDeveloperSandbox: () => {
-        const next = !get().isDeveloperSandbox;
-        set({
-          isDeveloperSandbox: next,
-          tier: next ? 'pulse_plus' : 'basic',
-        });
+      activateLicenseKey: (key: string) => {
+        const trimmed = key.trim().toUpperCase();
+        // Validates key format (e.g. TWENTIFI-PRO-... or any 8+ char key)
+        if (trimmed.length >= 6) {
+          get().upgradeToPro('lifetime', trimmed);
+          return true;
+        }
+        return false;
       },
 
       incrementAiExpansion: () => {
@@ -73,7 +78,7 @@ export const useMembershipStore = create<MembershipState>()(
         state.resetQuotasIfNewDay();
         const currentCount = get().dailyAiExpansionsUsed;
 
-        if (get().tier === 'pulse_plus') {
+        if (get().tier === 'pro' || get().tier === 'pulse_plus') {
           set({ dailyAiExpansionsUsed: currentCount + 1 });
           return true;
         }

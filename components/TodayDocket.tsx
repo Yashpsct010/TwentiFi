@@ -38,11 +38,9 @@ export default function TodayDocket({ onOpenPlanner }: TodayDocketProps) {
 
   const [currentTimeFormatted, setCurrentTimeFormatted] = useState(() => {
     const d = new Date();
-    const hours = d.getHours();
-    const minutes = d.getMinutes().toString().padStart(2, "0");
-    const ampm = hours >= 12 ? "PM" : "AM";
-    const displayHours = hours % 12 === 0 ? 12 : hours % 12;
-    return `${displayHours}:${minutes} ${ampm}`;
+    const hours = String(d.getHours()).padStart(2, "0");
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    return `${hours}:${minutes}`;
   });
 
   const [isShifting, setIsShifting] = useState(false);
@@ -54,11 +52,9 @@ export default function TodayDocket({ onOpenPlanner }: TodayDocketProps) {
     const interval = setInterval(() => {
       const d = new Date();
       setCurrentTimeMinutes(d.getHours() * 60 + d.getMinutes());
-      const hours = d.getHours();
-      const minutes = d.getMinutes().toString().padStart(2, "0");
-      const ampm = hours >= 12 ? "PM" : "AM";
-      const displayHours = hours % 12 === 0 ? 12 : hours % 12;
-      setCurrentTimeFormatted(`${displayHours}:${minutes} ${ampm}`);
+      const hours = String(d.getHours()).padStart(2, "0");
+      const minutes = String(d.getMinutes()).padStart(2, "0");
+      setCurrentTimeFormatted(`${hours}:${minutes}`);
     }, 15000); // Check every 15s
 
     return () => clearInterval(interval);
@@ -88,20 +84,50 @@ export default function TodayDocket({ onOpenPlanner }: TodayDocketProps) {
     }
   };
 
-  // Find active block
-  // 1. Task currently within start and end time that isn't completed
-  // 2. Or the first uncompleted task
-  const activeItemIndex = items.findIndex((item) => {
-    if (item.isCompleted) return false;
+  // ── Smart Time-Tracking Active Block Resolution ─────────────────────────────
+  // 1. Follow current clock time: If a task's window [startTime, endTime] matches now,
+  //    highlight it (or advance to the next uncompleted task if it's already marked done).
+  // 2. If between tasks or before the first task, highlight the next upcoming task.
+  // 3. Never jump backward to an expired, unfinished morning task.
+  const currentSlotIndex = items.findIndex((item) => {
     const startMins = timeToMinutes(item.startTime);
     const endMins = timeToMinutes(item.endTime);
     return currentTimeMinutes >= startMins && currentTimeMinutes < endMins;
   });
 
-  const resolvedActiveIndex =
-    activeItemIndex !== -1
-      ? activeItemIndex
-      : items.findIndex((item) => !item.isCompleted);
+  let resolvedActiveIndex = -1;
+
+  if (currentSlotIndex !== -1) {
+    if (!items[currentSlotIndex].isCompleted) {
+      resolvedActiveIndex = currentSlotIndex;
+    } else {
+      // Current slot completed: advance forward to the next uncompleted block
+      const nextUncompleted = items.findIndex(
+        (item, idx) => idx > currentSlotIndex && !item.isCompleted
+      );
+      resolvedActiveIndex = nextUncompleted !== -1 ? nextUncompleted : currentSlotIndex;
+    }
+  } else {
+    // Current time is between or outside task windows
+    const upcomingIndex = items.findIndex((item) => {
+      const startMins = timeToMinutes(item.startTime);
+      return startMins >= currentTimeMinutes && !item.isCompleted;
+    });
+
+    if (upcomingIndex !== -1) {
+      resolvedActiveIndex = upcomingIndex;
+    } else {
+      // Past all tasks or all remaining done: point to last uncompleted, or last block
+      let lastUncompleted = -1;
+      for (let i = items.length - 1; i >= 0; i--) {
+        if (!items[i].isCompleted) {
+          lastUncompleted = i;
+          break;
+        }
+      }
+      resolvedActiveIndex = lastUncompleted !== -1 ? lastUncompleted : items.length - 1;
+    }
+  }
 
   const formattedDate = new Date()
     .toLocaleDateString("en-GB", { day: "numeric", month: "short" })
@@ -193,14 +219,14 @@ export default function TodayDocket({ onOpenPlanner }: TodayDocketProps) {
             <Ionicons
               name="sparkles-outline"
               size={14}
-              color={t.isDark ? "#0D0B1F" : "#FAFAF8"}
+              color={t.colors.bg}
             />
             <Text
               style={{
                 fontFamily: "Inter_700Bold",
                 fontSize: 11,
                 letterSpacing: 1,
-                color: t.isDark ? "#0D0B1F" : "#FAFAF8",
+                color: t.colors.bg,
                 marginLeft: 6,
               }}
               className="uppercase"
@@ -447,7 +473,7 @@ export default function TodayDocket({ onOpenPlanner }: TodayDocketProps) {
                           <Ionicons
                             name="play"
                             size={13}
-                            color={t.isDark ? "#0D0B1F" : "#FAFAF8"}
+                            color={t.colors.bg}
                             style={{ marginRight: 6 }}
                           />
                           <Text
@@ -455,7 +481,7 @@ export default function TodayDocket({ onOpenPlanner }: TodayDocketProps) {
                               fontFamily: "Inter_700Bold",
                               fontSize: 11,
                               letterSpacing: 1.5,
-                              color: t.isDark ? "#0D0B1F" : "#FAFAF8",
+                              color: t.colors.bg,
                             }}
                             className="uppercase"
                           >
