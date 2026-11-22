@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import Lenis from 'lenis';
 import { 
   Download, 
   Mic, 
@@ -9,15 +10,16 @@ import {
   Cpu, 
   Flame, 
   ExternalLink, 
-  ChevronDown,
-  KeyRound,
-  Terminal,
-  ArrowUpRight,
-  CheckCircle2,
-  Lock,
-  Zap
+  ChevronDown, 
+  KeyRound, 
+  Terminal, 
+  ArrowUpRight, 
+  CheckCircle2, 
+  Lock, 
+  Zap 
 } from 'lucide-react';
 import logoHorizontal from '../../assets/images/logo-secondary-horizontal.png';
+import CustomCursor from './components/CustomCursor';
 
 // Direct latest APK download URL (bypasses double redirect)
 const DIRECT_APK_URL = "https://github.com/Yashpsct010/TwentiFi/releases/download/latest/twentifi.apk";
@@ -27,30 +29,60 @@ const AI_STUDIO_URL = "https://aistudio.google.com/app/apikey";
 
 export default function App() {
   const [scrolled, setScrolled] = useState(false);
+  const lenisRef = useRef(null);
 
   useEffect(() => {
-    const handleScroll = () => {
-      // Show navbar only after user starts scrolling down
-      if (window.scrollY > 80) {
+    // Initialize Lenis smooth scroll
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+      wheelMultiplier: 1,
+      touchMultiplier: 1.5,
+    });
+
+    lenisRef.current = lenis;
+
+    // Track scroll for navbar visibility
+    lenis.on('scroll', (e) => {
+      if (e.scroll > 80) {
         setScrolled(true);
       } else {
         setScrolled(false);
       }
-    };
+    });
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    let rafId;
+    function raf(time) {
+      lenis.raf(time);
+      rafId = requestAnimationFrame(raf);
+    }
+
+    rafId = requestAnimationFrame(raf);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      lenis.destroy();
+    };
   }, []);
 
   const scrollToSection = (id) => {
     const el = document.getElementById(id);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+      if (lenisRef.current) {
+        lenisRef.current.scrollTo(el, { duration: 1.4 });
+      } else {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
     }
   };
 
   return (
     <div className="min-h-screen bg-[#0d0d0d] text-[#f4f1eb] font-body selection:bg-primary/20 selection:text-primary">
+      {/* Precision Custom Theme Cursor */}
+      <CustomCursor />
 
       {/* ========================================================================= */}
       {/* FLOATING NAVBAR: Appears ONLY when user starts scrolling                  */}
