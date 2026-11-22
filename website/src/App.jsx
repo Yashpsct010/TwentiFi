@@ -1,242 +1,566 @@
-import { motion } from 'framer-motion';
-import { ArrowRight, Calendar, Download, Mic, Sparkles, Timer, User } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { 
+  Download, 
+  Mic, 
+  Clock, 
+  Sparkles, 
+  Calendar, 
+  ShieldCheck, 
+  Cpu, 
+  Flame, 
+  ExternalLink, 
+  Volume2, 
+  VolumeX, 
+  ChevronDown,
+  KeyRound,
+  Terminal,
+  ArrowUpRight,
+  CheckCircle2
+} from 'lucide-react';
 import logoHorizontal from '../../assets/images/logo-secondary-horizontal.png';
-import logoBadge from '../../assets/images/logo-circular-badge.png';
-import iconLight from '../../assets/images/icon-light.png';
-import introVideo from '../../assets/images/appintrologoforwebsite.mp4';
 
-const FadeIn = ({ children, delay = 0, className = '' }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 30 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, margin: '-50px' }}
-    transition={{ duration: 0.7, delay, ease: 'easeOut' }}
-    className={className}
-  >
-    {children}
-  </motion.div>
-);
-
-const FeatureCard = ({ icon: Icon, title, desc, delay }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true }}
-    transition={{ duration: 0.5, delay }}
-    whileHover={{ y: -5, scale: 1.02 }}
-    className="bg-surface-low p-8 rounded-[32px] border border-outline-variant/10 relative overflow-hidden group"
-  >
-    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-    <div className="bg-surface-high w-14 h-14 rounded-2xl flex items-center justify-center mb-6 border border-outline-variant/20 shadow-[0_8px_16px_rgba(0,0,0,0.4)]">
-      <Icon className="text-primary w-7 h-7" />
-    </div>
-    <h3 className="text-xl font-display font-bold text-on-surface mb-3">{title}</h3>
-    <p className="text-on-surface-variant leading-relaxed text-sm">{desc}</p>
-  </motion.div>
-);
+// Direct latest APK download URL (bypasses double redirect)
+const DIRECT_APK_URL = "https://github.com/Yashpsct010/TwentiFi/releases/download/latest/twentifi.apk";
+const GITHUB_RELEASE_PAGE = "https://github.com/Yashpsct010/TwentiFi/releases/latest";
+const GITHUB_REPO = "https://github.com/Yashpsct010/TwentiFi";
+const AI_STUDIO_URL = "https://aistudio.google.com/app/apikey";
 
 export default function App() {
+  const [isMuted, setIsMuted] = useState(true);
+  const videoRef = useRef(null);
+
+  const toggleSound = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !videoRef.current.muted;
+      setIsMuted(videoRef.current.muted);
+    }
+  };
+
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background text-on-surface overflow-x-hidden selection:bg-primary/30">
+    <div className="min-h-screen bg-[#0d0d0d] text-[#f4f1eb] font-body selection:bg-primary/20 selection:text-primary">
 
-      {/* Navbar Minimal */}
-      <nav className="fixed top-0 inset-x-0 z-50 h-24 flex items-center bg-background/80 backdrop-blur-md border-b border-outline-variant/10">
-        <div className="container mx-auto px-6 flex justify-between items-center">
-          <div className="flex items-center">
-            <img src={logoHorizontal} alt="TwentiFi" className="h-10 w-auto brightness-0 invert opacity-90" />
-          </div>
-          <motion.a
-            href="https://github.com/Yashpsct010/TwentiFi/releases/latest/download/twentifi.apk"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="flex items-center gap-2 glass-button px-6 py-3 rounded-full font-bold text-sm tracking-widest uppercase hover:text-primary transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            <span>Get APK</span>
-          </motion.a>
+      {/* ========================================================================= */}
+      {/* SECTION 1: FULLSCREEN SHOWCASE HERO (100vh)                               */}
+      {/* ========================================================================= */}
+      <section className="relative w-full h-screen min-h-[640px] flex flex-col justify-between overflow-hidden bg-black">
+        {/* Background Showcase Video */}
+        <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
+          <video
+            ref={videoRef}
+            src="/showcase.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover object-center filter brightness-[0.92] contrast-[1.05]"
+          />
+          {/* Subtle cinematic overlays for text contrast without obscuring the showcase */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/85 via-black/20 to-black/90 pointer-events-none" />
+          <div className="absolute inset-0 bg-radial-gradient from-transparent via-transparent to-black/60 pointer-events-none" />
         </div>
-      </nav>
 
-      {/* Hero Section */}
-      <header className="relative pt-28 pb-32 lg:pt-32 lg:pb-48 px-6">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-primary/20 rounded-full blur-[120px] pointer-events-none" />
-
-        <div className="container mx-auto max-w-5xl relative z-10 text-center">
-          <FadeIn>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/20 bg-primary/5 mb-8">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="uppercase tracking-[0.2em] text-xs font-bold text-primary">The Ethereal Intelligence</span>
-            </div>
-          </FadeIn>
-
-          <FadeIn delay={0.1}>
-            <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[1.1] mb-8">
-              AI life-logging in <br className="hidden md:block" />
-              <span className="text-transparent bg-clip-text bg-primary-gradient">20-min pulses.</span>
-            </h1>
-          </FadeIn>
-
-          <FadeIn delay={0.2}>
-            <p className="text-lg md:text-xl text-on-surface-variant max-w-2xl mx-auto mb-12 leading-relaxed">
-              Don't just track your time. Understand your vibe. TwentiFi breaks your day into focused pulses, using voice AI to generate deep insights into your productivity and mood.
-            </p>
-          </FadeIn>
-
-          <FadeIn delay={0.3} className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <motion.a
-              href="https://github.com/Yashpsct010/TwentiFi/releases/latest/download/twentifi.apk"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              className="primary-button px-8 py-5 rounded-full flex items-center justify-center w-full sm:w-auto text-base tracking-widest uppercase"
-            >
-              <span>Download APK</span>
-              <ArrowRight className="ml-3 w-5 h-5" />
-            </motion.a>
-            <motion.a
-              href="#guide"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              className="glass-button px-8 py-5 rounded-full flex items-center justify-center w-full sm:w-auto text-on-surface font-bold text-base tracking-widest uppercase hover:bg-surface-variant/50 transition-colors"
-            >
-              API Guide
-            </motion.a>
-          </FadeIn>
-        </div>
-      </header>
-
-      {/* Layered Interface Mockup Illusion */}
-      <section className="px-6 pb-32">
-        <FadeIn className="container mx-auto max-w-5xl">
-          <div className="w-full py-12 md:py-16 glass-panel rounded-[40px] relative overflow-hidden flex items-center justify-center border-t border-l border-white/10">
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 mix-blend-overlay" />
-            <div className="w-64 h-64 bg-secondary/20 rounded-full blur-[80px] absolute top-1/2 left-1/4" />
-            <div className="w-48 h-48 bg-primary/20 rounded-full blur-[60px] absolute bottom-1/4 right-1/4" />
-
-            <div className="relative z-10 text-center px-4 w-full flex flex-col items-center">
-              <div className="w-full max-w-lg md:max-w-xl rounded-[24px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 mb-8">
-                <video 
-                  src={introVideo}
-                  autoPlay 
-                  loop 
-                  muted 
-                  playsInline
-                  className="w-full h-auto object-cover"
-                />
-              </div>
-              <h2 className="font-display font-black text-3xl md:text-5xl tracking-tight mb-4">Focus. Log. <span className="text-primary">Evolve.</span></h2>
-              <p className="text-on-surface-variant font-medium">Experience the dark mode interface built for extreme focus.</p>
-            </div>
-          </div>
-        </FadeIn>
-      </section>
-
-      {/* Intelligence Layers (Features) */}
-      <section className="py-32 bg-surface-low relative">
-        <div className="container mx-auto px-6 max-w-6xl">
-          <FadeIn className="mb-20 md:text-center">
-            <h2 className="font-display font-black text-4xl md:text-5xl tracking-tight mb-6">Intelligence Layers</h2>
-            <p className="text-on-surface-variant text-lg max-w-2xl md:mx-auto">A system designed to reduce friction and maximize awareness through autonomous tracking and deep insights.</p>
-          </FadeIn>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            <FeatureCard
-              icon={Mic}
-              title="Voice Logging & Insights"
-              desc="Just speak. We use Gemini 3.1 Flash lite to perfectly transcribe your entry and extract a deep analysis of your emotional vibe and productivity."
-              delay={0.1}
-            />
-            <FeatureCard
-              icon={Timer}
-              title="20-Min Pulses"
-              desc="Work in dedicated blocks. TwentiFi autonomously nudges you every 20 minutes to capture what you actually got done. No cap."
-              delay={0.2}
-            />
-            <FeatureCard
-              icon={Calendar}
-              title="Streak Calendar"
-              desc="Visualize your consistency over the last 6 months. Maintain your momentum and watch your daily goal progress fill up."
-              delay={0.3}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* API Guide */}
-      <section id="guide" className="py-32 px-6">
-        <div className="container mx-auto max-w-5xl">
-          <FadeIn className="mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-tertiary/20 bg-tertiary/5 mb-6">
-              <User className="w-4 h-4 text-tertiary" />
-              <span className="uppercase tracking-[0.2em] text-[10px] font-bold text-tertiary">User Setup</span>
-            </div>
-            <h2 className="font-display font-black text-4xl md:text-5xl tracking-tight mb-6">Power it with Gemini</h2>
-            <p className="text-on-surface-variant text-lg max-w-2xl lg:mb-12">TwentiFi requires your own Google Gemini API key to operate its AI features. It's completely free tier and easy to setup.</p>
-          </FadeIn>
-
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <FadeIn delay={0.2} className="space-y-8">
-              <div className="flex gap-6">
-                <div className="w-12 h-12 rounded-full bg-surface-highest flex items-center justify-center font-bold text-primary shrink-0 border border-outline-variant/30">1</div>
-                <div>
-                  <h4 className="text-xl font-bold mb-2">Get an API Key</h4>
-                  <p className="text-on-surface-variant text-sm leading-relaxed">Head over to <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-primary underline">Google AI Studio</a> and generate a free API key. No credit card required.</p>
-                </div>
-              </div>
-              <div className="flex gap-6">
-                <div className="w-12 h-12 rounded-full bg-surface-highest flex items-center justify-center font-bold text-primary shrink-0 border border-outline-variant/30">2</div>
-                <div>
-                  <h4 className="text-xl font-bold mb-2">Paste in Onboarding</h4>
-                  <p className="text-on-surface-variant text-sm leading-relaxed">When you first open TwentiFi, simply paste your key into the designated input field during the onboarding flow.</p>
-                </div>
-              </div>
-              <div className="flex gap-6">
-                <div className="w-12 h-12 rounded-full bg-surface-highest flex items-center justify-center font-bold text-primary shrink-0 border border-outline-variant/30">3</div>
-                <div>
-                  <h4 className="text-xl font-bold mb-2">Start Logging</h4>
-                  <p className="text-on-surface-variant text-sm leading-relaxed">That's it. You now have access to hyper-fast voice transcription and personalized Gen-Z nudges via Gemini 1.5 Flash.</p>
-                </div>
-              </div>
-            </FadeIn>
-
-            <FadeIn delay={0.4} className="bg-surface-highest/50 rounded-3xl p-2 border border-outline-variant/30 shadow-2xl relative">
-              <div className="absolute inset-0 bg-primary-gradient opacity-5 mix-blend-color rounded-3xl pointer-events-none" />
-              <img
-                src="/aistudio-guide.gif"
-                alt="Getting a Gemini API Key from Google AI Studio"
-                className="w-full h-auto rounded-2xl border border-white/5 shadow-inner"
+        {/* Top Navigation */}
+        <header className="relative z-20 w-full px-6 md:px-12 pt-6 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <a href="#" className="flex items-center gap-3 group">
+              <img 
+                src={logoHorizontal} 
+                alt="TwentiFi" 
+                className="h-7 md:h-8 w-auto brightness-0 invert opacity-95 group-hover:opacity-100 transition-opacity" 
               />
-              {/* Fallback text if GIF is missing */}
-              <p className="absolute bottom-4 left-0 right-0 text-center text-on-surface-variant text-xs font-medium opacity-50 pointer-events-none">
-                Place your aistudio-guide.gif in the public folder
-              </p>
-            </FadeIn>
+            </a>
+            <div className="hidden sm:inline-flex items-center gap-2 px-2.5 py-1 rounded bg-white/5 border border-white/10 font-mono text-[10px] tracking-wider text-[#d4c3b3]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>v1.0.0 RELEASE</span>
+            </div>
+          </div>
+
+          <nav className="flex items-center gap-4 md:gap-8 font-mono text-xs tracking-wider">
+            <button 
+              onClick={() => scrollToSection('architecture')}
+              className="hidden md:inline-block text-[#9c9890] hover:text-[#f4f1eb] transition-colors uppercase cursor-pointer"
+            >
+              Architecture
+            </button>
+            <button 
+              onClick={() => scrollToSection('gemini-engine')}
+              className="hidden md:inline-block text-[#9c9890] hover:text-[#f4f1eb] transition-colors uppercase cursor-pointer"
+            >
+              Gemini Engine
+            </button>
+            <a
+              href={GITHUB_REPO}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:inline-flex items-center gap-1 text-[#9c9890] hover:text-[#f4f1eb] transition-colors uppercase"
+            >
+              <span>GitHub</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </a>
+            <a
+              href={DIRECT_APK_URL}
+              download="twentifi.apk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 bg-[#d4c3b3] text-[#0d0d0d] font-semibold rounded hover:bg-[#e8dccc] active:scale-95 transition-all text-xs tracking-wide cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>GET APK</span>
+            </a>
+          </nav>
+        </header>
+
+        {/* Video Sound Toggle Button (Floating) */}
+        <div className="relative z-20 px-6 md:px-12 flex justify-end">
+          <button
+            onClick={toggleSound}
+            aria-label={isMuted ? "Unmute audio" : "Mute audio"}
+            className="flex items-center gap-2 px-3 py-1.5 rounded bg-black/60 backdrop-blur-md border border-white/15 text-[#f4f1eb] hover:bg-black/80 transition-all font-mono text-[11px] tracking-widest uppercase cursor-pointer"
+          >
+            {isMuted ? (
+              <>
+                <VolumeX className="w-3.5 h-3.5 text-[#d4c3b3]" />
+                <span className="text-[#9c9890]">UNMUTE AUDIO</span>
+              </>
+            ) : (
+              <>
+                <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-[#f4f1eb]">SOUND ON</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Bottom Hero HUD / Action Bar */}
+        <div className="relative z-20 w-full px-6 md:px-12 pb-8 md:pb-12 max-w-7xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-8">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-[#d4c3b3]/10 border border-[#d4c3b3]/25 font-mono text-[11px] text-[#d4c3b3] tracking-widest uppercase mb-4">
+              <Sparkles className="w-3 h-3" />
+              <span>THE ULTRADIAN COGNITIVE LEDGER</span>
+            </div>
+            <h1 className="font-display text-4xl sm:text-6xl md:text-7xl font-light tracking-tight text-[#f4f1eb] leading-[1.08] mb-4">
+              AI life-logging in <br className="hidden sm:inline" />
+              <span className="italic font-normal text-[#d4c3b3]">twenty-minute</span> pulses.
+            </h1>
+            <p className="text-sm sm:text-base text-[#9c9890] max-w-xl font-body leading-relaxed">
+              Autonomous check-ins, fluid voice reflection, and cascading day-burn dockets powered by Google Gemini 3.1 Flash Lite. Precision productivity without the SaaS fatigue.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row md:flex-col items-start sm:items-center md:items-end gap-3 shrink-0">
+            <a
+              href={DIRECT_APK_URL}
+              download="twentifi.apk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto flex items-center justify-center gap-3 px-7 py-3.5 bg-[#d4c3b3] text-[#0d0d0d] font-semibold text-sm rounded hover:bg-[#e8dccc] shadow-lg shadow-black/50 transition-all font-mono tracking-wide cursor-pointer"
+            >
+              <Download className="w-4 h-4" />
+              <span>DOWNLOAD APK (v1.0.0)</span>
+            </a>
+
+            <div className="flex items-center gap-3 text-xs text-[#9c9890] font-mono">
+              <span>Android 10+</span>
+              <span>•</span>
+              <span>~97 MB</span>
+              <span>•</span>
+              <a 
+                href={GITHUB_RELEASE_PAGE} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="underline hover:text-[#d4c3b3]"
+              >
+                GitHub Release
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Scroll Indicator Prompt */}
+        <div className="relative z-20 w-full pb-4 flex justify-center items-center">
+          <button 
+            onClick={() => scrollToSection('architecture')} 
+            className="flex flex-col items-center gap-1.5 text-[#9c9890] hover:text-[#d4c3b3] transition-colors group cursor-pointer"
+          >
+            <span className="font-mono text-[10px] tracking-[0.25em] uppercase text-[#9c9890] group-hover:text-[#d4c3b3]">
+              Scroll to explore
+            </span>
+            <ChevronDown className="w-4 h-4 animate-bounce text-[#d4c3b3]" />
+          </button>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* SECTION 2: SYSTEM ARCHITECTURE & CADENCE                                   */}
+      {/* ========================================================================= */}
+      <section id="architecture" className="py-24 md:py-36 px-6 md:px-12 border-t border-white/10 bg-[#0d0d0d] relative">
+        <div className="max-w-7xl mx-auto">
+          {/* Section Header */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 pb-8 border-b border-white/10 gap-6">
+            <div>
+              <div className="font-mono text-[11px] tracking-[0.2em] text-[#d4c3b3] uppercase mb-2">
+                [ 01 // ARCHITECTURAL CADENCE ]
+              </div>
+              <h2 className="font-display text-3xl sm:text-5xl font-light text-[#f4f1eb] tracking-tight">
+                Built for deep work, <br />
+                <span className="italic font-normal text-[#d4c3b3]">not algorithmic distraction.</span>
+              </h2>
+            </div>
+            <p className="text-sm text-[#9c9890] max-w-md font-body leading-relaxed">
+              Standard time trackers turn productivity into bureaucratic data entry. TwentiFi operates silently in the background, prompting you at the natural limits of human concentration.
+            </p>
+          </div>
+
+          {/* Grid of Core Instruments */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Feature 1 */}
+            <div className="bg-[#141414] border border-white/10 p-7 flex flex-col justify-between hover:border-[#d4c3b3]/40 transition-colors">
+              <div>
+                <div className="w-10 h-10 rounded bg-white/5 border border-white/10 flex items-center justify-center text-[#d4c3b3] mb-6 font-mono text-sm">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div className="font-mono text-[10px] text-[#9c9890] tracking-wider uppercase mb-1">
+                  CADENCE // 20 MIN
+                </div>
+                <h3 className="text-lg font-display font-medium text-[#f4f1eb] mb-3">
+                  Ultradian Rhythm Pulses
+                </h3>
+                <p className="text-xs text-[#9c9890] leading-relaxed">
+                  Every 20 minutes, a gentle non-invasive nudge captures what you just accomplished. Keeps you accountable without breaking your flow state.
+                </p>
+              </div>
+              <div className="mt-8 pt-4 border-t border-white/5 font-mono text-[10px] text-[#d4c3b3]/80">
+                ZERO FORMS • ONE TAP LOG
+              </div>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="bg-[#141414] border border-white/10 p-7 flex flex-col justify-between hover:border-[#d4c3b3]/40 transition-colors">
+              <div>
+                <div className="w-10 h-10 rounded bg-white/5 border border-white/10 flex items-center justify-center text-[#d4c3b3] mb-6 font-mono text-sm">
+                  <Mic className="w-5 h-5" />
+                </div>
+                <div className="font-mono text-[10px] text-[#9c9890] tracking-wider uppercase mb-1">
+                  INPUT // STREAM OF THOUGHT
+                </div>
+                <h3 className="text-lg font-display font-medium text-[#f4f1eb] mb-3">
+                  Voice Reflection & Vibe
+                </h3>
+                <p className="text-xs text-[#9c9890] leading-relaxed">
+                  Speak raw, unfiltered thoughts. Google Gemini 3.1 Flash Lite extracts structured tasks, emotional sentiment, and energy dynamics instantly.
+                </p>
+              </div>
+              <div className="mt-8 pt-4 border-t border-white/5 font-mono text-[10px] text-[#d4c3b3]/80">
+                GEMINI 3.1 FLASH LITE • AUDIO SPEECH
+              </div>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="bg-[#141414] border border-white/10 p-7 flex flex-col justify-between hover:border-[#d4c3b3]/40 transition-colors">
+              <div>
+                <div className="w-10 h-10 rounded bg-white/5 border border-white/10 flex items-center justify-center text-[#d4c3b3] mb-6 font-mono text-sm">
+                  <Flame className="w-5 h-5 text-amber-400" />
+                </div>
+                <div className="font-mono text-[10px] text-[#9c9890] tracking-wider uppercase mb-1">
+                  TIMELINE // DAY BURN RAIL
+                </div>
+                <h3 className="text-lg font-display font-medium text-[#f4f1eb] mb-3">
+                  Today's Docket & Day Burn
+                </h3>
+                <p className="text-xs text-[#9c9890] leading-relaxed">
+                  A real-time cascading schedule with the live NOW flame indicator. When life delays a task, remaining blocks dynamically cascade without manual recalibration.
+                </p>
+              </div>
+              <div className="mt-8 pt-4 border-t border-white/5 font-mono text-[10px] text-[#d4c3b3]/80">
+                AI BLUEPRINT STUDIO • TIME CASCADE
+              </div>
+            </div>
+
+            {/* Feature 4 */}
+            <div className="bg-[#141414] border border-white/10 p-7 flex flex-col justify-between hover:border-[#d4c3b3]/40 transition-colors">
+              <div>
+                <div className="w-10 h-10 rounded bg-white/5 border border-white/10 flex items-center justify-center text-[#d4c3b3] mb-6 font-mono text-sm">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div className="font-mono text-[10px] text-[#9c9890] tracking-wider uppercase mb-1">
+                  HISTORICAL // MATRIX
+                </div>
+                <h3 className="text-lg font-display font-medium text-[#f4f1eb] mb-3">
+                  6-Month Streak Ledger
+                </h3>
+                <p className="text-xs text-[#9c9890] leading-relaxed">
+                  Inspect your consistency over half a year in an unyielding matrix. Watch your discipline compound into undeniable momentum day after day.
+                </p>
+              </div>
+              <div className="mt-8 pt-4 border-t border-white/5 font-mono text-[10px] text-[#d4c3b3]/80">
+                WATERMELONDB • PERSISTENT SQLITE
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section id="download" className="py-32 px-6">
-        <FadeIn className="container mx-auto max-w-4xl glass-panel rounded-[40px] p-12 md:p-24 text-center relative overflow-hidden">
-          <div className="absolute inset-0 bg-primary-gradient opacity-10 mix-blend-color" />
-          <div className="relative z-10">
-            <h2 className="font-display font-black text-4xl md:text-6xl tracking-tight mb-8">Ready to lock in?</h2>
-            <p className="text-on-surface-variant text-lg md:text-xl mb-12 max-w-2xl mx-auto">Maintain your streak. Evolve your focus.</p>
-            <motion.a
-              href="https://github.com/Yashpsct010/TwentiFi/releases/latest/download/twentifi.apk"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="primary-button inline-flex items-center px-10 py-6 rounded-full text-lg tracking-widest uppercase"
-            >
-              <Download className="mr-3 w-6 h-6" />
-              <span>Download APK</span>
-            </motion.a>
+      {/* ========================================================================= */}
+      {/* SECTION 3: PRIVACY & SYSTEM TELEMETRY                                      */}
+      {/* ========================================================================= */}
+      <section className="py-20 px-6 md:px-12 bg-[#121212] border-t border-white/10">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded bg-white/5 border border-white/10 flex items-center justify-center text-[#d4c3b3] shrink-0">
+              <ShieldCheck className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <h4 className="font-mono text-sm font-semibold uppercase tracking-wider text-[#f4f1eb] mb-1">
+                Zero Cloud Telemetry
+              </h4>
+              <p className="text-xs text-[#9c9890] leading-relaxed">
+                Your voice notes, logs, and emotional sentiment reside exclusively on your local device SQLite storage. No remote profiling servers.
+              </p>
+            </div>
           </div>
-        </FadeIn>
+
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded bg-white/5 border border-white/10 flex items-center justify-center text-[#d4c3b3] shrink-0">
+              <Cpu className="w-5 h-5 text-[#d4c3b3]" />
+            </div>
+            <div>
+              <h4 className="font-mono text-sm font-semibold uppercase tracking-wider text-[#f4f1eb] mb-1">
+                Direct Gemini Gateway
+              </h4>
+              <p className="text-xs text-[#9c9890] leading-relaxed">
+                Calls stream directly from your device to Google AI Studio with sub-second response times using the latest Gemini 3.1 Flash Lite model.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded bg-white/5 border border-white/10 flex items-center justify-center text-[#d4c3b3] shrink-0">
+              <Terminal className="w-5 h-5 text-amber-400" />
+            </div>
+            <div>
+              <h4 className="font-mono text-sm font-semibold uppercase tracking-wider text-[#f4f1eb] mb-1">
+                Open Distribution
+              </h4>
+              <p className="text-xs text-[#9c9890] leading-relaxed">
+                Distributed freely via signed universal Android APK releases on GitHub. Verifiable, inspectable, and without Google Play dependencies.
+              </p>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 border-t border-outline-variant/10 text-center">
-        <p className="text-on-surface-variant text-sm font-medium tracking-wide uppercase">&copy; {new Date().getFullYear()} TwentiFi. Built with React & Tailwind.</p>
+      {/* ========================================================================= */}
+      {/* SECTION 4: GEMINI 3.1 FLASH LITE SETUP GUIDE                               */}
+      {/* ========================================================================= */}
+      <section id="gemini-engine" className="py-24 md:py-36 px-6 md:px-12 border-t border-white/10 bg-[#0d0d0d]">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+            {/* Left Column: Instructions */}
+            <div className="lg:col-span-6">
+              <div className="font-mono text-[11px] tracking-[0.2em] text-[#d4c3b3] uppercase mb-2">
+                [ 02 // INTELLIGENCE INTEGRATION ]
+              </div>
+              <h2 className="font-display text-3xl sm:text-5xl font-light text-[#f4f1eb] tracking-tight mb-6">
+                Your own keys. <br />
+                <span className="italic font-normal text-[#d4c3b3]">Unlimited intelligence.</span>
+              </h2>
+              <p className="text-sm text-[#9c9890] leading-relaxed mb-10">
+                TwentiFi runs on the official Google Gemini API. By bringing your own free-tier API key from Google AI Studio, you bypass costly subscription fees and retain full sovereignty over your usage.
+              </p>
+
+              <div className="space-y-6">
+                {/* Step 1 */}
+                <div className="flex gap-4 p-4 rounded bg-[#141414] border border-white/10">
+                  <div className="w-8 h-8 rounded bg-white/5 border border-white/10 flex items-center justify-center font-mono text-xs text-[#d4c3b3] shrink-0">
+                    01
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-[#f4f1eb] mb-1">
+                      Obtain Free API Key
+                    </h4>
+                    <p className="text-xs text-[#9c9890] leading-relaxed">
+                      Visit <a href={AI_STUDIO_URL} target="_blank" rel="noopener noreferrer" className="text-[#d4c3b3] underline font-medium hover:text-[#f4f1eb]">Google AI Studio</a>. Sign in with your Google account and generate an API key. No credit card or billing setup required.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Step 2 */}
+                <div className="flex gap-4 p-4 rounded bg-[#141414] border border-white/10">
+                  <div className="w-8 h-8 rounded bg-white/5 border border-white/10 flex items-center justify-center font-mono text-xs text-[#d4c3b3] shrink-0">
+                    02
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-[#f4f1eb] mb-1">
+                      Paste in TwentiFi Onboarding
+                    </h4>
+                    <p className="text-xs text-[#9c9890] leading-relaxed">
+                      Launch the app on your Android device. On the onboarding screen or in Profile Settings, paste your API key into the encrypted local vault.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Step 3 */}
+                <div className="flex gap-4 p-4 rounded bg-[#141414] border border-white/10">
+                  <div className="w-8 h-8 rounded bg-white/5 border border-white/10 flex items-center justify-center font-mono text-xs text-[#d4c3b3] shrink-0">
+                    03
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-[#f4f1eb] mb-1">
+                      Autonomous Synthesis Unlocked
+                    </h4>
+                    <p className="text-xs text-[#9c9890] leading-relaxed">
+                      Voice entries, emotional vibe tracking, and AI schedule blueprints cascade immediately via the Gemini 3.1 Flash Lite model.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 flex items-center gap-4">
+                <a
+                  href={AI_STUDIO_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/15 text-xs font-mono uppercase tracking-wider text-[#d4c3b3] transition-colors"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>Open Google AI Studio</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+
+            {/* Right Column: Visual Demonstration */}
+            <div className="lg:col-span-6">
+              <div className="p-3 bg-[#141414] border border-white/10 rounded-lg shadow-2xl relative">
+                <div className="flex items-center justify-between pb-3 px-2 border-b border-white/10 font-mono text-[10px] text-[#9c9890]">
+                  <span>AI STUDIO KEY ACQUISITION</span>
+                  <span className="text-emerald-400">STATUS // VERIFIED</span>
+                </div>
+                <div className="pt-3">
+                  <img
+                    src="/aistudio-guide.gif"
+                    alt="Acquiring Google Gemini API Key from Google AI Studio"
+                    className="w-full h-auto rounded border border-white/5"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* SECTION 5: DOWNLOAD LEDGER & APK INSTALLATION INSTRUCTIONS                 */}
+      {/* ========================================================================= */}
+      <section id="download" className="py-24 md:py-36 px-6 md:px-12 border-t border-white/10 bg-[#121212]">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-[#161616] border border-white/15 p-8 md:p-14 rounded-lg relative overflow-hidden">
+            <div className="font-mono text-[11px] tracking-[0.2em] text-[#d4c3b3] uppercase mb-3">
+              [ 03 // DEPLOYMENT LEDGER ]
+            </div>
+            
+            <h2 className="font-display text-3xl sm:text-5xl font-light text-[#f4f1eb] tracking-tight mb-4">
+              Begin your <span className="italic font-normal text-[#d4c3b3]">first pulse.</span>
+            </h2>
+
+            <p className="text-sm sm:text-base text-[#9c9890] max-w-2xl mb-10 leading-relaxed font-body">
+              TwentiFi is distributed directly as an optimized Android APK. Click below to download the latest signed build, or view release notes directly on GitHub.
+            </p>
+
+            {/* Download Buttons Row */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-10">
+              <a
+                href={DIRECT_APK_URL}
+                download="twentifi.apk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-3 px-8 py-4 bg-[#d4c3b3] text-[#0d0d0d] font-semibold text-sm rounded hover:bg-[#e8dccc] transition-all font-mono tracking-wide shadow-lg shadow-black/40 cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                <span>DOWNLOAD TWENTIFI.APK (LATEST)</span>
+              </a>
+
+              <a
+                href={GITHUB_RELEASE_PAGE}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/15 text-[#f4f1eb] font-mono text-xs uppercase tracking-wider transition-colors cursor-pointer"
+              >
+                <span>GitHub Releases</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+
+            {/* Important Installation Guidance Note */}
+            <div className="p-5 rounded bg-[#0d0d0d] border border-white/10">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="space-y-2">
+                  <h4 className="font-mono text-xs font-semibold uppercase tracking-wider text-[#f4f1eb]">
+                    Android Installation Notice
+                  </h4>
+                  <p className="text-xs text-[#9c9890] leading-relaxed">
+                    Because TwentiFi is installed directly outside the Google Play Store, Android will display a standard security prompt asking to <span className="text-[#f4f1eb] font-medium">"Allow installation from this source"</span> (Chrome or your chosen browser). TwentiFi is a verified, signed, and private application containing no tracker SDKs.
+                  </p>
+                  <p className="text-[11px] text-[#9c9890] font-mono">
+                    Package Name: <span className="text-[#d4c3b3]">com.anonymous.twentifi</span> • Minimum OS: <span className="text-[#d4c3b3]">Android 10.0 (API 29+)</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* FOOTER                                                                    */}
+      {/* ========================================================================= */}
+      <footer className="py-12 px-6 md:px-12 border-t border-white/10 bg-[#0d0d0d]">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 font-mono text-xs text-[#9c9890]">
+          <div className="flex items-center gap-3">
+            <span className="text-[#f4f1eb] font-semibold">TwentiFi</span>
+            <span>•</span>
+            <span>VELLUM LEDGER DESIGN SYSTEM</span>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <a 
+              href={GITHUB_REPO} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:text-[#d4c3b3] transition-colors"
+            >
+              SOURCE CODE
+            </a>
+            <a 
+              href={GITHUB_RELEASE_PAGE} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:text-[#d4c3b3] transition-colors"
+            >
+              RELEASE ARCHIVE
+            </a>
+            <a 
+              href={AI_STUDIO_URL} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:text-[#d4c3b3] transition-colors"
+            >
+              GOOGLE AI STUDIO
+            </a>
+          </div>
+
+          <div>
+            &copy; {new Date().getFullYear()} TwentiFi. MIT License.
+          </div>
+        </div>
       </footer>
     </div>
   );
