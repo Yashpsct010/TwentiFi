@@ -162,8 +162,8 @@ export default function HomeScreen() {
 
   const handleStart = () => {
     try {
-      const taskTexts = sessionPreviewTasks.map((tk) => tk.text);
-      startSession(taskTexts, selectedMilestoneId ?? undefined);
+      const tasksToStart = sessionPreviewTasks.map((tk) => ({ id: tk.id, text: tk.text }));
+      startSession(tasksToStart.length > 0 ? tasksToStart : tempGoals, selectedMilestoneId ?? undefined);
       setTempGoals([]);
     } catch (err) {
       console.error("Failed to start session:", err);
@@ -175,10 +175,10 @@ export default function HomeScreen() {
       // Finalize milestone tasks before clearing session state
       const { activeMilestoneId } = useSessionStore.getState();
       if (activeMilestoneId) {
-        const completedIds = goals
-          .filter((g) => g.completed)
-          .map((g) => g.id);
-        finalizeSession(activeMilestoneId, completedIds);
+        const completedGoals = goals.filter((g) => g.completed);
+        const completedIds = completedGoals.map((g) => g.id);
+        const completedTexts = completedGoals.map((g) => g.text);
+        finalizeSession(activeMilestoneId, completedIds, completedTexts);
       }
       await endSession();
       setSelectedMilestoneId(null);

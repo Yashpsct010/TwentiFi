@@ -257,9 +257,9 @@ export default function TodayDocket({ onOpenPlanner }: TodayDocketProps) {
                       className="flex-row items-center px-2 py-1 rounded-[4px] border"
                       style={{
                         backgroundColor: t.isDark
-                          ? "rgba(166, 69, 66, 0.20)"
+                          ? "rgba(245, 158, 11, 0.15)"
                           : "#FDF4F4",
-                        borderColor: "#E09895",
+                        borderColor: t.isDark ? "#F59E0B" : "#E09895",
                       }}
                     >
                       {!imageError ? (
@@ -274,7 +274,7 @@ export default function TodayDocket({ onOpenPlanner }: TodayDocketProps) {
                         <Ionicons
                           name="flame"
                           size={13}
-                          color="#A64542"
+                          color={t.isDark ? "#F59E0B" : "#A64542"}
                           style={{ marginRight: 4 }}
                         />
                       )}
@@ -283,7 +283,7 @@ export default function TodayDocket({ onOpenPlanner }: TodayDocketProps) {
                           fontFamily: "Inter_700Bold",
                           fontSize: 9,
                           letterSpacing: 1,
-                          color: "#A64542",
+                          color: t.isDark ? "#F59E0B" : "#A64542",
                         }}
                       >
                         NOW • {currentTimeFormatted}
@@ -293,7 +293,7 @@ export default function TodayDocket({ onOpenPlanner }: TodayDocketProps) {
                       className="flex-1 ml-2"
                       style={{
                         height: 1,
-                        backgroundColor: "#E09895",
+                        backgroundColor: t.isDark ? "rgba(245, 158, 11, 0.4)" : "#E09895",
                       }}
                     />
                   </View>

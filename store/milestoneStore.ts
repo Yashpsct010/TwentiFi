@@ -45,9 +45,10 @@ interface MilestoneState {
   deleteTask: (milestoneId: string, taskId: string) => void;
   updateTask: (milestoneId: string, taskId: string, text: string) => void;
   replaceAllTasks: (milestoneId: string, texts: string[]) => void;
+  toggleTaskStatus: (milestoneId: string, taskId: string) => void;
 
   // Session lifecycle
-  finalizeSession: (milestoneId: string, completedTaskIds: string[]) => void;
+  finalizeSession: (milestoneId: string, completedTaskIds: string[], completedTaskTexts?: string[]) => void;
 
   // Habit daily reset
   resetHabitsIfNewDay: () => void;
@@ -162,28 +163,66 @@ export const useMilestoneStore = create<MilestoneState>()(
           ),
         })),
 
-      /**
-       * Called when a session ends.
-       * - completedTaskIds → status: 'completed'
-       * - All other pending/carried tasks → status: 'carried' (roll over)
-       * - Already completed tasks stay completed.
-       */
-      finalizeSession: (milestoneId, completedTaskIds) =>
+      toggleTaskStatus: (milestoneId, taskId) =>
         set((state) => ({
           milestones: state.milestones.map((m) => {
             if (m.id !== milestoneId) return m;
+            const updatedTasks = m.tasks.map((t) => {
+              if (t.id !== taskId) return t;
+              const nextStatus: TaskStatus = t.status === 'completed' ? 'pending' : 'completed';
+              return {
+                ...t,
+                status: nextStatus,
+                completedAt: nextStatus === 'completed' ? new Date().toISOString() : undefined,
+              };
+            });
+            const allTasksCompleted =
+              m.type === 'target' &&
+              updatedTasks.length > 0 &&
+              updatedTasks.every((t) => t.status === 'completed');
+            return {
+              ...m,
+              tasks: updatedTasks,
+              isCompleted: allTasksCompleted ? true : (m.type === 'target' ? false : m.isCompleted),
+              completedAt: allTasksCompleted ? new Date().toISOString() : (m.type === 'target' ? undefined : undefined),
+            };
+          }),
+        })),
+
+      /**
+       * Called when a session ends.
+       * - completedTaskIds (or matching texts) → status: 'completed'
+       * - All other pending/carried tasks → status: 'carried' (roll over)
+       * - Already completed tasks stay completed.
+       * - If target milestone has all tasks completed, auto-mark isCompleted: true
+       */
+      finalizeSession: (milestoneId, completedTaskIds, completedTaskTexts) =>
+        set((state) => ({
+          milestones: state.milestones.map((m) => {
+            if (m.id !== milestoneId) return m;
+            const updatedTasks = m.tasks.map((t) => {
+              const isMatch =
+                completedTaskIds.includes(t.id) ||
+                (completedTaskTexts && completedTaskTexts.includes(t.text));
+              if (isMatch) {
+                return { ...t, status: 'completed' as TaskStatus, completedAt: new Date().toISOString() };
+              }
+              if (t.status === 'pending' || t.status === 'carried') {
+                return { ...t, status: 'carried' as TaskStatus };
+              }
+              return t; // already completed — leave it
+            });
+
+            const allTasksCompleted =
+              m.type === 'target' &&
+              updatedTasks.length > 0 &&
+              updatedTasks.every((t) => t.status === 'completed');
+
             return {
               ...m,
               sessionCount: m.sessionCount + 1,
-              tasks: m.tasks.map((t) => {
-                if (completedTaskIds.includes(t.id)) {
-                  return { ...t, status: 'completed', completedAt: new Date().toISOString() };
-                }
-                if (t.status === 'pending' || t.status === 'carried') {
-                  return { ...t, status: 'carried' };
-                }
-                return t; // already completed — leave it
-              }),
+              tasks: updatedTasks,
+              isCompleted: allTasksCompleted ? true : m.isCompleted,
             };
           }),
         })),

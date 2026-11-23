@@ -108,6 +108,14 @@ export const deleteAllLogs = async () => {
   await db.runAsync("DELETE FROM logs");
 };
 
+export const updateLogsGroupName = async (oldName: string, newName: string) => {
+  const db = await getDB();
+  await db.runAsync(
+    "UPDATE logs SET groupName = $newName WHERE groupName = $oldName",
+    { $newName: newName, $oldName: oldName }
+  );
+};
+
 export const mergeLogsFromBackup = async (backupDbName: string) => {
   const db = await getDB();
   const backupDb = await SQLite.openDatabaseAsync(backupDbName, { useNewConnection: true });

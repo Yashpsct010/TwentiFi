@@ -6,6 +6,7 @@ interface GroupState {
   groups: string[];
   addGroup: (groupName: string) => void;
   removeGroup: (groupName: string) => void;
+  renameGroup: (oldName: string, newName: string) => void;
   clearGroups: () => void;
 }
 
@@ -21,6 +22,13 @@ export const useGroupStore = create<GroupState>()(
       removeGroup: (groupName: string) => set((state) => ({
         groups: state.groups.filter((g) => g !== groupName)
       })),
+      renameGroup: (oldName: string, newName: string) => set((state) => {
+        const trimmed = newName.trim();
+        if (!trimmed || state.groups.includes(trimmed)) return state;
+        return {
+          groups: state.groups.map((g) => (g === oldName ? trimmed : g)),
+        };
+      }),
       clearGroups: () => set({ groups: ["Uncategorized"] }),
     }),
     {

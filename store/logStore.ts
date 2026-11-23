@@ -1,10 +1,11 @@
 import { create } from 'zustand';
-import { saveLog, getAllLogs, deleteAllLogs, LogEntry } from '@/services/database';
+import { saveLog, getAllLogs, deleteAllLogs, updateLogsGroupName, LogEntry } from '@/services/database';
 import * as FileSystem from 'expo-file-system/legacy';
 
 interface LogState {
   logs: LogEntry[];
   addLog: (activity: string, mood: LogEntry['mood'], productivity: number, audioUri?: string | null, environment?: string, tags?: string[], remarks?: string, groupName?: string) => Promise<void>;
+  renameGroupInLogs: (oldName: string, newName: string) => Promise<void>;
   clearLogs: () => Promise<void>;
   loadLogs: () => Promise<void>;
 }
@@ -47,6 +48,20 @@ export const useLogStore = create<LogState>((set) => ({
     } catch (error) {
       console.error('Failed to save log:', error);
       throw error;
+    }
+  },
+  renameGroupInLogs: async (oldName: string, newName: string) => {
+    try {
+      await updateLogsGroupName(oldName, newName);
+      set((state) => ({
+        logs: state.logs.map((log) =>
+          (log.groupName === oldName || (!log.groupName && oldName === 'Uncategorized'))
+            ? { ...log, groupName: newName }
+            : log
+        ),
+      }));
+    } catch (error) {
+      console.error('Failed to rename group in logs:', error);
     }
   },
   clearLogs: async () => {

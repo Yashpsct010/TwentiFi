@@ -17,7 +17,7 @@ interface SessionState {
   pulseNotificationId: string | null;
   forgotTimerNotificationId: string | null;
   goals: { id: string; text: string; completed: boolean }[];
-  startSession: (goals: string[], milestoneId?: string) => Promise<void>;
+  startSession: (goals: (string | { id?: string; text: string })[], milestoneId?: string) => Promise<void>;
   endSession: () => Promise<void>;
   toggleGoal: (id: string) => void;
   addGoal: (text: string) => void;
@@ -45,11 +45,20 @@ export const useSessionStore = create<SessionState>()(
           activeMilestoneId: milestoneId ?? null,
           pulseNotificationId: null,
           forgotTimerNotificationId: null,
-          goals: goals.map((g) => ({
-            id: Math.random().toString(36).substr(2, 9),
-            text: g,
-            completed: false,
-          })),
+          goals: goals.map((g) => {
+            if (typeof g === 'string') {
+              return {
+                id: Math.random().toString(36).substr(2, 9),
+                text: g,
+                completed: false,
+              };
+            }
+            return {
+              id: g.id || Math.random().toString(36).substr(2, 9),
+              text: g.text,
+              completed: false,
+            };
+          }),
         });
         
         const granted = await requestPermissions();
